@@ -259,7 +259,7 @@ rm(trips.raw, persons)
 
 modal_share = trips_inProgress %>%
   group_by(Verkehrsmittel) %>%
-  summarize(share = n() / nrow(trips.inProgress)) %>%
+  summarize(share = n() / nrow(trips_inProgress)) %>%
   ungroup()
 
 ##Plot modal share
@@ -363,7 +363,7 @@ plt.sim.distance.share = ggplot(distance.share, aes(Distanzgruppe, share, fill =
 plt.sim.distance.share
 save_plot_as_jpg(plt.sim.distance.share, "MATSim_distance_share")
 
-rm(trips.inProgress, plt.sim.distance.share)
+rm(trips_inProgress, plt.sim.distance.share)
 
 
 
@@ -413,6 +413,6 @@ plt.diff = ggplot(distance_share_vs, aes(Distanzgruppe, Differenz, fill = Verkeh
   theme(legend.position = "bottom")
 
 plt.diff
-#save_plot_as_jpg(plt.diff, "distance_share_diff")
+save_plot_as_jpg(plt.diff, "distance_share_diff")
 
 #ggplotly(plt.diff)
