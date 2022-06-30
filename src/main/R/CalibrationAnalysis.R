@@ -205,8 +205,8 @@ plt.mid.modal.share = mid.modal.share %>%
   
   theme(legend.position = "bottom")
 
-save_plot_as_jpg(plt.mid.modal.share, "MiD_Modal_Share")
-save_plot_as_jpg(plt.distance.share, "MiD_Distance_Share")
+#save_plot_as_jpg(plt.mid.modal.share, "MiD_Modal_Share")
+#save_plot_as_jpg(plt.distance.share, "MiD_Distance_Share")
 
 
 
@@ -216,8 +216,8 @@ save_plot_as_jpg(plt.distance.share, "MiD_Distance_Share")
 
 
 ##Parameters for file paths
-sampleSize = "25"
-runId = "075"
+sampleSize = "10"
+runId = "093"
 
 ##define distance bins
 levels = c("< 1 km", "1 bis 5 km", "5 bis 10 km", "10 bis 50 km", "50 bis 100 km","> 100 km")
@@ -253,7 +253,7 @@ trips_inProgress = trips_raw %>%
   filter(!is.na(Verkehrsmittel)) %>%
   filter(!is.na(Distanzgruppe))
 
-rm(trips.raw, persons)
+rm(trips_raw, persons, shape)
 
 ##Modal Split ##
 
@@ -293,7 +293,7 @@ sim_distance_share_abs = trips_inProgress %>%
 
 ## compare trips number per distance group
 {
-sim.sum = sim.distance.share.abs %>%
+sim.sum = sim_distance_share_abs %>%
   
   group_by(Distanzgruppe) %>%
   
@@ -348,7 +348,7 @@ distance_share = sim_distance_share_abs %>%
 
 ##Plot distance share
 
-plt.sim.distance.share = ggplot(distance.share, aes(Distanzgruppe, share, fill = Verkehrsmittel)) +
+plt.sim.distance.share = ggplot(distance_share, aes(Distanzgruppe, share, fill = Verkehrsmittel)) +
   
   geom_col(color = "black", position = position_dodge()) +
   
@@ -372,11 +372,11 @@ rm(trips_inProgress, plt.sim.distance.share)
 
 
 ##calculate difference between mid and sim distance share
-distance_share_abs_vs = filter(mid_plotting_abs, Distanzgruppe != "Gesamt") %>%
-  bind_rows(sim_distance_share_abs) %>%
-  pivot_wider(names_from = "Type", values_from = c("share")) %>%
-  replace_na(list(  Sim = 0  )) %>%
-  mutate(Differenz = Sim - MiD)
+#distance_share_abs_vs = filter(mid_plotting_abs, Distanzgruppe != "Gesamt") %>%
+#  bind_rows(sim_distance_share_abs) %>%
+#  pivot_wider(names_from = "Type", values_from = c("share")) %>%
+#  replace_na(list(  Sim = 0  )) %>%
+#  mutate(Differenz = Sim - MiD)
 
 distance_share_vs = filter(mid_plotting, Distanzgruppe != "Gesamt") %>%
   bind_rows(distance_share) %>%
@@ -386,7 +386,7 @@ distance_share_vs = filter(mid_plotting, Distanzgruppe != "Gesamt") %>%
   )) %>%
   mutate(Differenz = Sim - MiD)
 
-score = sum( distance_share_vs$Differenz^2 )
+score = round(sum( distance_share_vs$Differenz^2 ),2)
 
 #write_csv(distance_share_vs, file = paste0("C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Daten/Kalibrierung/",
 #                                           sampleSize, "pct/", sampleSize, "_run_", runId, "_score_",
@@ -413,6 +413,6 @@ plt.diff = ggplot(distance_share_vs, aes(Distanzgruppe, Differenz, fill = Verkeh
   theme(legend.position = "bottom")
 
 plt.diff
-save_plot_as_jpg(plt.diff, "distance_share_diff")
+save_plot_as_jpg(plt.diff, paste0("distance_share_diff","_run_id", runId,"_score_", score))
 
 #ggplotly(plt.diff)
