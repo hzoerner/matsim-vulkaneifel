@@ -23,16 +23,22 @@ public class PrepareNetwork {
     private static final String pathToConfig = workingDirectory + "vulkaneifel-v1.0-25pct.config.xml";
     private static final String pathToDilutionArea = "vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
 
-    private static final String drtNetworkName = "network_with_drt.xml.gz";
+    private static final String drtNetworkName = ".network_with_drt.xml.gz";
 
     private static final Logger log = LogManager.getLogger(PrepareNetwork.class);
 
     public static void main(String[] args) {
 
         log.info("+++++ Reading config from " + pathToConfig + " +++++");
-        Config config = ConfigUtils.loadConfig(pathToConfig);
+        Scenario scenario;
+        String runId;
 
-        Scenario scenario = ScenarioUtils.loadScenario(config);
+        {
+            Config config = ConfigUtils.loadConfig(pathToConfig);
+            runId = config.controler().getRunId();
+            scenario = ScenarioUtils.loadScenario(config);
+        }
+
         Network network = scenario.getNetwork();
 
         Geometry dilutionArea = ShapeFileReader.getAllFeatures(workingDirectory + pathToDilutionArea).stream()
@@ -46,21 +52,16 @@ public class PrepareNetwork {
             if(!dilutionArea.covers(MGC.coord2Point(link.getCoord()))) continue;
 
             if(link.getAllowedModes().contains(TransportMode.car)){
-                Set<String> newModes = link.getAllowedModes();
+                Set<String> newModes = new java.util.HashSet<>(Set.copyOf(link.getAllowedModes().stream().toList()));
                 newModes.add(TransportMode.drt);
 
                 link.setAllowedModes(newModes);
             }
         }
 
-        String drtNetworkFilePath = workingDirectory + config.controler().getRunId() + drtNetworkName;
+        String drtNetworkFilePath = workingDirectory + runId + drtNetworkName;
 
         log.info("+++++ Writing new network to " + drtNetworkFilePath + "+++++");
         new NetworkWriter(network).write(drtNetworkFilePath);
-
-        config.network().setInputFile(drtNetworkFilePath);
-        config.controler().setRunId(config.controler().getRunId() + "_with_drt");
-
-        new ConfigWriter(config).write(workingDirectory + "vulkaneifel-v1.0-25pct.config.drt.xml");
     }
 }
