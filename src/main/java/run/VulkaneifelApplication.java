@@ -1,6 +1,7 @@
 package run;
 
 import org.matsim.application.MATSimApplication;
+import org.matsim.application.analysis.emissions.AirPollutionByVehicleCategory;
 import org.matsim.application.prepare.population.CleanPopulation;
 import org.matsim.application.prepare.population.DownSamplePopulation;
 import org.matsim.application.prepare.population.ResolveGridCoordinates;
@@ -20,6 +21,9 @@ import java.util.List;
         CreateRegionalTrainLine.class, RemoveBusLineFromSmallSchedule.class,
         MergeTransitSchedules.class, TrajectoryToPlans.class, CleanPopulation.class, ResolveGridCoordinates.class,
         DownSamplePopulation.class
+})
+@MATSimApplication.Analysis({
+        AirPollutionByVehicleCategory.class
 })
 
 public class VulkaneifelApplication extends MATSimApplication {
