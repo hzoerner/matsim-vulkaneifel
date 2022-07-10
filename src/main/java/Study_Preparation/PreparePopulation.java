@@ -86,8 +86,6 @@ public class PreparePopulation {
 
                         drtPlan.addActivity(activity);
 
-                        int i = drtPlanActivities.indexOf(activity);
-                        int j = (drtPlanActivities.size() -1);
                         //if last activity of plan is reached there will be no trip starting at actitvity
                         if(drtPlanActivities.indexOf(activity) < (drtPlanActivities.size() -1)) {
                             TripStructureUtils.Trip trip = TripStructureUtils.findTripStartingAtActivity(activity, plan);
