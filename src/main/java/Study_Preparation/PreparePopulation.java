@@ -59,52 +59,59 @@ public class PreparePopulation {
         factory.getRouteFactories().setRouteFactory(DrtRoute.class, new DrtRouteFactory());
 
         for (var person : population.getPersons().values()) {
-            for (var plan : person.getPlans()) {
+            Plan drtPlan = null;
+            Plan oldPlan = person.getSelectedPlan();
 
-                //check if Plan consist any trips which completely happens within shape area
-                if (TripStructureUtils.getTrips(plan).stream().noneMatch(trip -> isTripInDilutionArea(trip, dilutionArea)))
-                    continue;
+            if(person.getPlans().size() > 1) log.warn("Person " + person.getId() + " seems to has more than one plan!");
 
-                List<PlanElement> planElementList = plan.getPlanElements();
+            //check if Plan consist any trips which completely happens within shape area
+            if (TripStructureUtils.getTrips(oldPlan).stream().noneMatch(trip -> isTripInDilutionArea(trip, dilutionArea)))
+                continue;
 
-                if (planElementList.stream().
-                        filter(planElement -> planElement instanceof Leg).
-                        anyMatch(planElement -> modes.contains(((Leg) planElement).getMode()))) {
+            List<PlanElement> planElementList = oldPlan.getPlanElements();
 
-                    //simplest way to set drt as leg mode will be to recreate plans with pt main mode without pt interaction events and walk legs
-                    Plan drtPlan = factory.createPlan();
-                    drtPlan.setPerson(person);
-                    drtPlan.setType(plan.getType());
+            if (planElementList.stream().
+                    filter(planElement -> planElement instanceof Leg).
+                    anyMatch(planElement -> modes.contains(((Leg) planElement).getMode()))) {
 
-                    List<Activity> drtPlanActivities = plan.getPlanElements().stream().
-                            filter(planElement -> planElement instanceof Activity).
-                            filter(planElement -> !((Activity) planElement).getType().endsWith("interaction")).
-                            map(planElement -> (Activity) planElement).
-                            collect(Collectors.toList());
+                //simplest way to set drt as leg mode will be to recreate plans with pt main mode without pt interaction events and walk legs
+                drtPlan = factory.createPlan();
+                drtPlan.setPerson(person);
+                drtPlan.setType(oldPlan.getType());
 
-                    for (Activity activity : drtPlanActivities) {
+                List<Activity> drtPlanActivities = oldPlan.getPlanElements().stream().
+                        filter(planElement -> planElement instanceof Activity).
+                        filter(planElement -> !((Activity) planElement).getType().endsWith("interaction")).
+                        map(planElement -> (Activity) planElement).
+                        collect(Collectors.toList());
 
-                        drtPlan.addActivity(activity);
+                for (Activity activity : drtPlanActivities) {
 
-                        //if last activity of plan is reached there will be no trip starting at actitvity
-                        if(drtPlanActivities.indexOf(activity) < (drtPlanActivities.size() -1)) {
-                            TripStructureUtils.Trip trip = TripStructureUtils.findTripStartingAtActivity(activity, plan);
+                    drtPlan.addActivity(activity);
 
-                            if (modeToChangeInTrip(trip, modes) && isTripInDilutionArea(trip, dilutionArea)) {
+                    //if last activity of plan is reached there will be no trip starting at actitvity
+                    if(drtPlanActivities.indexOf(activity) < (drtPlanActivities.size() -1)) {
+                        TripStructureUtils.Trip trip = TripStructureUtils.findTripStartingAtActivity(activity, oldPlan);
 
-                                Leg drtLeg = factory.createLeg("Leg");
-                                drtLeg.setMode(TransportMode.drt);
-                                TripStructureUtils.setRoutingMode(drtLeg, TransportMode.drt);
+                        if (modeToChangeInTrip(trip, modes) && isTripInDilutionArea(trip, dilutionArea)) {
 
-                                drtPlan.addLeg(drtLeg);
+                            Leg drtLeg = factory.createLeg("Leg");
+                            drtLeg.setMode(TransportMode.drt);
+                            TripStructureUtils.setRoutingMode(drtLeg, TransportMode.drt);
 
-                                if (counter++ % 100 == 0) log.info("+++++ Modified " + counter + " plans +++++");
-                            } else {
-                                trip.getLegsOnly().forEach(drtPlan::addLeg);
-                            }
+                            drtPlan.addLeg(drtLeg);
+
+                            if (counter++ % 100 == 0) log.info("+++++ Modified " + counter + " plans +++++");
+                        } else {
+                            trip.getLegsOnly().forEach(drtPlan::addLeg);
                         }
                     }
                 }
+            }
+
+            if(drtPlan != null) {
+                person.removePlan(oldPlan);
+                person.addPlan(drtPlan);
             }
         }
         return population;
