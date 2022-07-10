@@ -4,8 +4,9 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.TransportMode;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Population;
+import org.matsim.api.core.v01.population.*;
+import org.matsim.contrib.drt.routing.DrtRoute;
+import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
@@ -15,7 +16,9 @@ import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.opengis.feature.simple.SimpleFeature;
 
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class PreparePopulation {
 
@@ -48,32 +51,70 @@ public class PreparePopulation {
     }
 
     private static Population changeLegModeToDrt(Config config, Set<String> modes,
-                                           Geometry dilutionArea){
+                                           Geometry dilutionArea) {
         int counter = 0;
 
-        Population noDrtPlans = PopulationUtils.readPopulation(config.plans().getInputFile());
-        Population drtPlans = PopulationUtils.createPopulation(ConfigUtils.createConfig());
-        drtPlans.setName(noDrtPlans.getName());
+        Population population = PopulationUtils.readPopulation(config.plans().getInputFile());
+        PopulationFactory factory = population.getFactory();
+        factory.getRouteFactories().setRouteFactory(DrtRoute.class, new DrtRouteFactory());
 
-        for(var person: noDrtPlans.getPersons().values()){
-            for(var plan: person.getPlans()){
-                for(var trip: TripStructureUtils.getTrips(plan)){
+        for (var person : population.getPersons().values()) {
+            for (var plan : person.getPlans()) {
 
-                    if(isTripInDilutionArea(trip, dilutionArea)){
+                //check if Plan consist any trips which completely happens within shape area
+                if (TripStructureUtils.getTrips(plan).stream().noneMatch(trip -> isTripInDilutionArea(trip, dilutionArea)))
+                    continue;
 
-                        for(Leg leg: trip.getLegsOnly()){
-                            if (modes.contains(leg.getMode())) {
-                                leg.setMode(TransportMode.drt);
-                                if(counter++ % 100 == 0) log.info("Total Number of edited legs: " + counter);
+                List<PlanElement> planElementList = plan.getPlanElements();
+
+                if (planElementList.stream().
+                        filter(planElement -> planElement instanceof Leg).
+                        anyMatch(planElement -> modes.contains(((Leg) planElement).getMode()))) {
+
+                    //simplest way to set drt as leg mode will be to recreate plans with pt main mode without pt interaction events and walk legs
+                    Plan drtPlan = factory.createPlan();
+                    drtPlan.setPerson(person);
+                    drtPlan.setType(plan.getType());
+
+                    List<Activity> drtPlanActivities = plan.getPlanElements().stream().
+                            filter(planElement -> planElement instanceof Activity).
+                            filter(planElement -> !((Activity) planElement).getType().endsWith("interaction")).
+                            map(planElement -> (Activity) planElement).
+                            collect(Collectors.toList());
+
+                    for (Activity activity : drtPlanActivities) {
+
+                        drtPlan.addActivity(activity);
+
+                        int i = drtPlanActivities.indexOf(activity);
+                        int j = (drtPlanActivities.size() -1);
+                        //if last activity of plan is reached there will be no trip starting at actitvity
+                        if(drtPlanActivities.indexOf(activity) < (drtPlanActivities.size() -1)) {
+                            TripStructureUtils.Trip trip = TripStructureUtils.findTripStartingAtActivity(activity, plan);
+
+                            if (modeToChangeInTrip(trip, modes) && isTripInDilutionArea(trip, dilutionArea)) {
+
+                                Leg drtLeg = factory.createLeg("Leg");
+                                drtLeg.setMode(TransportMode.drt);
+                                TripStructureUtils.setRoutingMode(drtLeg, TransportMode.drt);
+
+                                drtPlan.addLeg(drtLeg);
+
+                                if (counter++ % 100 == 0) log.info("+++++ Modified " + counter + " plans +++++");
+                            } else {
+                                trip.getLegsOnly().forEach(drtPlan::addLeg);
                             }
                         }
                     }
                 }
             }
-            drtPlans.addPerson(person);
         }
+        return population;
+    }
 
-        return drtPlans;
+    private static boolean modeToChangeInTrip(TripStructureUtils.Trip trip, Set<String> modes){
+
+        return trip.getLegsOnly().stream().anyMatch(leg -> modes.contains(leg.getMode()));
     }
 
     private static boolean isTripInDilutionArea(TripStructureUtils.Trip trip, Geometry dilutionArea){
