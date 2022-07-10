@@ -3,18 +3,21 @@ package Study_Preparation;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.TransportMode;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.NetworkWriter;
+import org.matsim.contrib.analysis.vsp.traveltimedistance.NetworkRouteValidator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.ConfigWriter;
+import org.matsim.core.network.algorithms.MultimodalNetworkCleaner;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.gis.ShapeFileReader;
 
+import java.util.List;
 import java.util.Set;
 
 public class PrepareNetwork {
@@ -44,20 +47,36 @@ public class PrepareNetwork {
         Geometry dilutionArea = ShapeFileReader.getAllFeatures(workingDirectory + pathToDilutionArea).stream()
                 .map(simpleFeature -> (Geometry) simpleFeature.getDefaultGeometry())
                 .findFirst()
-                .get();
+                .get()
+                .getEnvelope();
 
         log.info("+++++ Start to add drt to network car links +++++");
+
+        //list contains links which are covered by shape envelope but are need to generate a connected network
+        List<Id<Link>> idList = List.of(Id.createLinkId("607487450011f"), Id.createLinkId("607487450011r"));
+
         for(Link link: network.getLinks().values()){
+
+            if(idList.stream().anyMatch(linkId -> linkId.equals(link.getId()))){
+                log.info("+++++ Add Drt as allowed mode to missing links +++++");
+
+                Set<String> newModes = new java.util.HashSet<>(Set.copyOf(link.getAllowedModes().stream().toList()));
+                newModes.add(TransportMode.drt);
+
+                link.setAllowedModes(newModes);
+            }
 
             if(!dilutionArea.covers(MGC.coord2Point(link.getCoord()))) continue;
 
-            if(link.getAllowedModes().contains(TransportMode.car)){
+            if(link.getAllowedModes().contains(TransportMode.car) ){
                 Set<String> newModes = new java.util.HashSet<>(Set.copyOf(link.getAllowedModes().stream().toList()));
                 newModes.add(TransportMode.drt);
 
                 link.setAllowedModes(newModes);
             }
         }
+
+        new MultimodalNetworkCleaner(network).run(Set.of(TransportMode.drt));
 
         String drtNetworkFilePath = workingDirectory + runId + drtNetworkName;
 
