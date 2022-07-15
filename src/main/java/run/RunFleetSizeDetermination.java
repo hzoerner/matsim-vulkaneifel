@@ -38,6 +38,9 @@ public class RunFleetSizeDetermination {
 
         for(Integer size: fleetSize){
 
+            config.controler().setRunId("fleet-size-" + fleetSize + "-no-rebalanc");
+            config.controler().setOutputDirectory("fleetsize-determination/fleet-size-" + fleetSize + "-no-rebalanc-output/");
+
             multiModeDrtConfig.getModalElements().forEach(drtConfigGroup -> {
                 drtConfigGroup.setDrtServiceAreaShapeFile(pathToServieArea);
                 drtConfigGroup.setVehiclesFile(vehicleDirectory + size + "-1_seater-drt-vehicles.xml");
