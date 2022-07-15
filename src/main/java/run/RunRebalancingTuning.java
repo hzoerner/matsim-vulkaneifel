@@ -2,13 +2,10 @@ package run;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingModule;
-import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingParams;
 import org.matsim.contrib.drt.optimizer.rebalancing.mincostflow.MinCostFlowRebalancingStrategyParams;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
 import org.matsim.contrib.drt.run.DrtConfigs;
-import org.matsim.contrib.drt.run.DrtControlerCreator;
 import org.matsim.contrib.drt.run.MultiModeDrtConfigGroup;
 import org.matsim.contrib.drt.run.MultiModeDrtModule;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
@@ -22,7 +19,6 @@ import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.scenario.ScenarioUtils;
-import utils.RebalanceStudyUtils;
 
 import java.util.List;
 
@@ -31,8 +27,8 @@ public class RunRebalancingTuning {
     private static final String pathToConfig = "./scenario/open-vulkaneifel-scenario/vulkaneifel-drt-test.config.xml";
     private static final String pathToServieArea = "./scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
 
-    private static Double[] alphaValues = {0.2, 0.4, 0.6, 0.8};
-    private static Double[] betaValues = {0.0, 0.1, 0.3, 0.7,};
+    private static final Double[] alphaValues = {0.2, 0.4, 0.6, 0.8};
+    private static final Double[] betaValues = {0.0, 0.1, 0.3, 0.7,};
 
     private static final Logger log = Logger.getLogger(RunRebalancingTuning.class);
 
