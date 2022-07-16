@@ -23,20 +23,21 @@ import java.util.List;
 public class RunFleetSizeDetermination {
 
     private static final String pathToConfig = "./scenario/open-vulkaneifel-scenario/vulkaneifel-drt-test.config.xml";
-    private static final String vehicleDirectory = "./scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/drt-vehicles/";
-    private static final String pathToServieArea = "./scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
+    private static final String vehicleDirectory = "vulkaneifel-v1.0-25pct/drt-vehicles/";
+    private static final String pathToServieArea = "vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
 
-    private static final Integer[] fleetSize = {20, 40, 60, 80, 100, 120, 140, 160};
+    private static final String[] fleetSize = {"40", "60", "80", "100", "120", "140", "160"};
 
     public static void main(String[] args) {
 
         Config config = ConfigUtils.loadConfig(pathToConfig, new DvrpConfigGroup(), new MultiModeDrtConfigGroup());
         config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
+        config.controler().setLastIteration(300);
         prepareConfig(config);
 
         MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
 
-        for(Integer size: fleetSize){
+        for(String size: fleetSize){
 
             config.controler().setRunId("fleet-size-" + fleetSize + "-no-rebalanc");
             config.controler().setOutputDirectory("fleetsize-determination/fleet-size-" + fleetSize + "-no-rebalanc-output/");
