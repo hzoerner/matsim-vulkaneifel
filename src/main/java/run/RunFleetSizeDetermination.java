@@ -39,8 +39,8 @@ public class RunFleetSizeDetermination {
 
         for(String size: fleetSize){
 
-            config.controler().setRunId("fleet-size-" + fleetSize + "-no-rebalanc");
-            config.controler().setOutputDirectory("fleetsize-determination/fleet-size-" + fleetSize + "-no-rebalanc-output/");
+            config.controler().setRunId("fleet-size-" + size + "-no-rebalanc");
+            config.controler().setOutputDirectory("fleetsize-determination/fleet-size-" + size + "-no-rebalanc-output/");
 
             multiModeDrtConfig.getModalElements().forEach(drtConfigGroup -> {
                 drtConfigGroup.setDrtServiceAreaShapeFile(pathToServieArea);
