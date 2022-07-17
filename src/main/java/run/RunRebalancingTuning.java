@@ -47,7 +47,7 @@ public class RunRebalancingTuning {
 
                 String runid = "drt-rebalanc-tuning-alpha-" + alpha.intValue() + "-beta-" + beta.intValue();
                 config.controler().setRunId(runid);
-                config.controler().setOutputDirectory("rebelanc-tuning/" + runid);
+                config.controler().setOutputDirectory("rebalanc-tuning/" + runid);
 
                 multiModeDrtConfig.getModalElements().forEach(drtConfigGroup -> {
                     drtConfigGroup.setDrtServiceAreaShapeFile(pathToServieArea);
