@@ -2,6 +2,7 @@ package run;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.contrib.drt.optimizer.rebalancing.RebalancingParams;
 import org.matsim.contrib.drt.optimizer.rebalancing.mincostflow.MinCostFlowRebalancingStrategyParams;
 import org.matsim.contrib.drt.routing.DrtRoute;
 import org.matsim.contrib.drt.routing.DrtRouteFactory;
@@ -24,7 +25,7 @@ import java.util.List;
 
 public class RunRebalancingTuning {
 
-    private static final String pathToConfig = "./scenario/open-vulkaneifel-scenario/vulkaneifel-drt-test.config.xml";
+    private static final String pathToConfig = "scenario/open-vulkaneifel-scenario/vulkaneifel-drt-rebalanc.config.xml";
     private static final String pathToServieArea = "vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
     private static final String pathToDRTVehicles = "vulkaneifel-v1.0-25pct/drt-vehicles/100-1_seater-drt-vehicles.xml";
 
@@ -62,7 +63,9 @@ public class RunRebalancingTuning {
                     minCostFlowRebalancingStrategyParams.setTargetBeta(beta);
                     minCostFlowRebalancingStrategyParams.setDemandEstimationPeriod(1800);
 
-                    drtConfigGroup.getRebalancingParams().get().addParameterSet(minCostFlowRebalancingStrategyParams);
+                    RebalancingParams rebalancingParams = new RebalancingParams();
+                    rebalancingParams.addParameterSet(minCostFlowRebalancingStrategyParams);
+                    drtConfigGroup.addParameterSet(rebalancingParams);
                 });
 
                 DrtConfigs.adjustMultiModeDrtConfig(multiModeDrtConfig, config.planCalcScore(), config.plansCalcRoute());
