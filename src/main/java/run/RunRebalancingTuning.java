@@ -25,7 +25,8 @@ import java.util.List;
 public class RunRebalancingTuning {
 
     private static final String pathToConfig = "./scenario/open-vulkaneifel-scenario/vulkaneifel-drt-test.config.xml";
-    private static final String pathToServieArea = "./scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
+    private static final String pathToServieArea = "vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
+    private static final String pathToDRTVehicles = "vulkaneifel-v1.0-25pct/drt-vehicles/100-1_seater-drt-vehicles.xml";
 
     private static final Double[] alphaValues = {0.2, 0.4, 0.6, 0.8};
     private static final Double[] betaValues = {0.0, 0.1, 0.3, 0.7,};
@@ -44,8 +45,13 @@ public class RunRebalancingTuning {
 
             for(Double alpha: alphaValues){
 
+                String runid = "drt-rebalanc-tuning-alpha-" + alpha.intValue() + "-beta-" + beta.intValue();
+                config.controler().setRunId(runid);
+                config.controler().setOutputDirectory(runid);
+
                 multiModeDrtConfig.getModalElements().forEach(drtConfigGroup -> {
                     drtConfigGroup.setDrtServiceAreaShapeFile(pathToServieArea);
+                    drtConfigGroup.setVehiclesFile(pathToDRTVehicles);
 
                     MinCostFlowRebalancingStrategyParams minCostFlowRebalancingStrategyParams = new MinCostFlowRebalancingStrategyParams();
                     minCostFlowRebalancingStrategyParams.setRebalancingTargetCalculatorType(
