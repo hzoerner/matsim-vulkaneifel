@@ -36,17 +36,17 @@ public class RunRebalancingTuning {
 
     public static void main(String[] args) {
 
-        Config config = ConfigUtils.loadConfig(pathToConfig, new DvrpConfigGroup(), new MultiModeDrtConfigGroup());
-        config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
-        prepareConfig(config);
-
-        MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
-
         for(Double beta: betaValues){
 
             for(Double alpha: alphaValues){
 
-                String runid = "drt-rebalanc-tuning-alpha-" + alpha.intValue() + "-beta-" + beta.intValue();
+                Config config = ConfigUtils.loadConfig(pathToConfig, new DvrpConfigGroup(), new MultiModeDrtConfigGroup());
+                config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
+                prepareConfig(config);
+
+                MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
+
+                String runid = "drt-rebalanc-tuning-alpha-" + alpha.doubleValue() + "-beta-" + beta.doubleValue();
                 config.controler().setRunId(runid);
                 config.controler().setOutputDirectory("rebalanc-tuning/" + runid);
 
