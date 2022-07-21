@@ -20,6 +20,7 @@ import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
 import org.matsim.core.config.groups.QSimConfigGroup;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.collections.Tuple;
 
 import java.util.List;
 
@@ -30,7 +31,10 @@ public class RunRebalancingTuning {
     private static final String pathToDRTVehicles = "vulkaneifel-v1.0-25pct/drt-vehicles/100-1_seater-drt-vehicles.xml";
 
     private static final Double[] alphaValues = {0.2, 0.4, 0.6, 0.8};
-    private static final Double[] betaValues = {0.0, 0.1, 0.3, 0.7,};
+    private static final Double[] betaValues = {0.1, 0.3, 0.7,};
+
+    private static final List<Tuple<Double, Double>> alreadyDone = List.of(new Tuple<>(0.1, 0.2),
+            new Tuple<>(0.1, 0.4));
 
     private static final Logger log = Logger.getLogger(RunRebalancingTuning.class);
 
@@ -40,13 +44,18 @@ public class RunRebalancingTuning {
 
             for(Double alpha: alphaValues){
 
+                if(alreadyDone.contains(new Tuple<>(beta, alpha))){
+                    log.info("Skip alpha " + alpha + " and beta " + beta);
+                    continue;
+                }
+
                 Config config = ConfigUtils.loadConfig(pathToConfig, new DvrpConfigGroup(), new MultiModeDrtConfigGroup());
                 config.qsim().setSimStarttimeInterpretation(QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime);
                 prepareConfig(config);
 
                 MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
 
-                String runid = "drt-rebalanc-tuning-alpha-" + alpha.doubleValue() + "-beta-" + beta.doubleValue();
+                String runid = "drt-rebalanc-tuning-alpha-" + alpha + "-beta-" + beta;
                 config.controler().setRunId(runid);
                 config.controler().setOutputDirectory("rebalanc-tuning/" + runid);
 
