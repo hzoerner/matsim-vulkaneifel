@@ -9,10 +9,10 @@ import org.matsim.contrib.drt.schedule.DrtTaskFactory;
 import org.matsim.contrib.drt.scheduler.DrtScheduleInquiry;
 import org.matsim.contrib.dvrp.fleet.Fleet;
 import org.matsim.contrib.dvrp.run.AbstractDvrpModeQSimModule;
-import org.matsim.contrib.dvrp.run.ModalProviders;
 import org.matsim.contrib.dvrp.trafficmonitoring.DvrpTravelTimeModule;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.mobsim.framework.MobsimTimer;
+import org.matsim.core.modal.ModalProviders;
 import org.matsim.core.router.costcalculators.TravelDisutilityFactory;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
@@ -38,7 +38,7 @@ public class SimpleUnitCapacityRequestInserterModule extends AbstractDvrpModeQSi
 						maxEuclideanDistance)))
 				.asEagerSingleton();
 
-		bindModal(VehicleAssignmentTools.class).toProvider(new ModalProviders.AbstractProvider<>(drtCfg.getMode()) {
+		bindModal(VehicleAssignmentTools.class).toProvider(new ModalProviders.AbstractProvider<>(drtCfg.getMode(), null) { //TODO this may not work
 			@Inject
 			@Named(DvrpTravelTimeModule.DVRP_ESTIMATED)
 			private TravelTime travelTime;
@@ -52,6 +52,5 @@ public class SimpleUnitCapacityRequestInserterModule extends AbstractDvrpModeQSi
 				return new VehicleAssignmentTools(travelTime, taskFactory, drtCfg, network, travelDisutility);
 			}
 		}).asEagerSingleton();
-
 	}
 }

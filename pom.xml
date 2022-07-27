@@ -14,25 +14,19 @@
 		<!-- <matsim.version>13.0</matsim.version> -->
 
 		<!-- PR-labelled release -->
-		<!--<matsim.version>14.0-PR1452</matsim.version>-->
+		<matsim.version>15.0-PR2080</matsim.version>
 
 		<!-- snapshot == not recommended: rather use PR-labelled release!-->
-		<matsim.version>14.0-SNAPSHOT</matsim.version>
+<!--		<matsim.version>14.0-SNAPSHOT</matsim.version>-->
 
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<maven.compiler.source>11</maven.compiler.source>
-		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
 	</properties>
 
 	<repositories>
 	  <!--Note that in general repositories are not transitive, so they need to be repeated at every level where needed.-->
-		<repository>
-			<!-- Geotools is not on Maven central -->
-			<id>osgeo</id>
-			<name>Geotools repository</name>
-			<url>https://repo.osgeo.org/repository/release/</url>
-		</repository>
 		<repository>
 			<!-- Repository for MATSim (MATSim is not on Maven central, releases and snapshots) -->
 			<id>matsim</id>
@@ -48,6 +42,12 @@
 			<id>slimjars</id>
 			<url>https://mvn.slimjars.com</url>
 		</repository>
+		<repository>
+			<!-- Geotools is not on Maven central -->
+			<id>osgeo</id>
+			<name>Geotools repository</name>
+			<url>https://repo.osgeo.org/repository/release/</url>
+		</repository>
 	</repositories>
 
 	<dependencies>
@@ -61,6 +61,13 @@
 		<dependency>
 			<groupId>org.matsim.contrib</groupId>
 			<artifactId>drt</artifactId>
+			<version>${matsim.version}</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.matsim.contrib</groupId>
+			<artifactId>dvrp</artifactId>
 			<version>${matsim.version}</version>
 			<scope>compile</scope>
 		</dependency>
