@@ -203,10 +203,10 @@ plt.mid.modal.share = mid.modal.share %>%
   
   theme_bw() +
   
-  theme(legend.position = "bottom")
+  theme(legend.position = "none")
 
-#save_plot_as_jpg(plt.mid.modal.share, "MiD_Modal_Share")
-#save_plot_as_jpg(plt.distance.share, "MiD_Distance_Share")
+save_plot_as_jpg(plt.mid.modal.share, "MiD_Modal_Share")
+save_plot_as_jpg(plt.distance.share, "MiD_Distance_Share")
 
 
 
@@ -216,8 +216,8 @@ plt.mid.modal.share = mid.modal.share %>%
 
 
 ##Parameters for file paths
-sampleSize = "10"
-runId = "093"
+sampleSize = "25"
+runId = "165"
 
 ##define distance bins
 levels = c("< 1 km", "1 bis 5 km", "5 bis 10 km", "10 bis 50 km", "50 bis 100 km","> 100 km")
@@ -225,9 +225,12 @@ breaks = c(0, 1000, 5000, 10000, 50000, 100000, Inf)
 
 
 ## import data
-TRIPS = paste0("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/calibration/", sampleSize, "pct/", runId,".output_trips.csv.gz")
-SHP = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/vulkaneifel-0.1-25pct/dilutionArea/dilutionArea.shp"
-PERSONS =paste0("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/calibration/", sampleSize, "pct/", runId,".output_persons.csv.gz")
+TRIPS = paste0("C:/Users/ACER/Desktop/Uni/Bachelorarbeit/calibration/", sampleSize, "pct/", runId,".output_trips.csv.gz")
+SHP = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp"
+PERSONS =paste0("C:/Users/ACER/Desktop/Uni/Bachelorarbeit/calibration/", sampleSize, "pct/", runId,".output_persons.csv.gz")
+
+TRIPS2 = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Output/Test-1000-it/vulkaneifel-1.0-25pct.output_trips.csv.gz"
+PERSONS2 = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Output/Test-1000-it/vulkaneifel-1.0-25pct.output_persons.csv.gz"
 
 trips_raw = read_delim(TRIPS, delim = ";", trim_ws = T, col_types = cols(person = col_character()))
 shape = st_read(SHP)
@@ -267,7 +270,7 @@ plt.modal.share = ggplot(modal_share, aes(Verkehrsmittel, share, fill = Verkehrs
   
   geom_col(color = "black") +
   
-  geom_text(aes(label = round(share, 2)), vjust = -0.5) +
+  geom_text(aes(label = round(share, 3)), vjust = -0.5) +
   
   coord_cartesian(ylim = c(0,0.7)) +
   
@@ -277,32 +280,28 @@ plt.modal.share = ggplot(modal_share, aes(Verkehrsmittel, share, fill = Verkehrs
   
   theme_bw() +
   
-  theme(legend.position = "bottom")
+  theme(legend.position = "none")
 
-plt.modal.share
-#save_plot_as_jpg(plt.modal.share, "MATSim_modal_share")
+#plt.modal.share
+save_plot_as_jpg(plt.modal.share, "MATSim_modal_share")
 
 ## Distance Share
 sim_distance_share_abs = trips_inProgress %>%
   group_by(Verkehrsmittel, Distanzgruppe) %>%
   summarize(n = n()) %>% ungroup() %>%
   group_by(Distanzgruppe) %>%
-  mutate(total = sum(n)) %>%  ungroup() %>%
+  mutate(total = sum(n),
+         Type = "Sim") %>%  ungroup() %>%
   group_by(Verkehrsmittel, Distanzgruppe)
 
 
 ## compare trips number per distance group
-{
 sim.sum = sim_distance_share_abs %>%
-  
   group_by(Distanzgruppe) %>%
-  
   summarise(n = sum(n))
 
 mid.sum = mid_plotting_abs %>%
-  
   group_by(Distanzgruppe) %>%
-  
   summarise(n = sum(n_trips))
 
 total.sim = sum(sim.sum$n)
@@ -334,12 +333,13 @@ plt.diff = ggplot(n.diff, aes(Distanzgruppe, Differenz, fill = Distanzgruppe)) +
   
   theme_bw() +
   
-  theme(legend.position = "bottom")
+  theme(legend.position = "none")
 
 save_plot_as_jpg(plt.diff, "trips_diff")
 
 rm(n.diff, sim.sum, mid.sum, plt.diff)
-}
+
+mid.distance.share.abs.corrected = mutate_if(mid.distance.share.abs, is.numeric, function(x){x*q})
 
 distance_share = sim_distance_share_abs %>%
   summarise(share = n / total) %>% ungroup() %>%
@@ -372,11 +372,18 @@ rm(trips_inProgress, plt.sim.distance.share)
 
 
 ##calculate difference between mid and sim distance share
-#distance_share_abs_vs = filter(mid_plotting_abs, Distanzgruppe != "Gesamt") %>%
-#  bind_rows(sim_distance_share_abs) %>%
-#  pivot_wider(names_from = "Type", values_from = c("share")) %>%
-#  replace_na(list(  Sim = 0  )) %>%
-#  mutate(Differenz = Sim - MiD)
+distance_share_abs_vs = mid_plotting_abs %>%
+  mutate(n = round(n_trips * q, 0)) %>%
+  group_by(Distanzgruppe) %>%
+  mutate(total = sum(n)) %>%
+  ungroup() %>%
+  select(-n_trips) %>%
+  bind_rows(sim_distance_share_abs) %>%
+  filter(Distanzgruppe != "Gesamt" & Verkehrsmittel != "Gesamt") %>%
+  select(-total) %>%
+  pivot_wider(names_from = "Type", values_from = c("n")) %>%
+  replace_na(list(  Sim = 0  )) %>%
+  mutate(Differenz = Sim - MiD)
 
 distance_share_vs = filter(mid_plotting, Distanzgruppe != "Gesamt") %>%
   bind_rows(distance_share) %>%
@@ -412,7 +419,16 @@ plt.diff = ggplot(distance_share_vs, aes(Distanzgruppe, Differenz, fill = Verkeh
   
   theme(legend.position = "bottom")
 
-plt.diff
-save_plot_as_jpg(plt.diff, paste0("distance_share_diff","_run_id", runId,"_score_", score))
+plt.diff.abs = ggplot(distance_share_abs_vs, aes(Distanzgruppe, Differenz, fill = Verkehrsmittel)) +
+  
+  geom_col(color = "black", position = position_dodge()) +
+  
+  coord_flip() +
+  
+  scale_y_continuous(breaks= seq(-1000, 6000, 1000)) +
+  
+  theme_bw()
 
-#ggplotly(plt.diff)
+plt.diff.abs
+
+save_plot_as_jpg(plt.diff, paste0("distance_share_diff","_run_id", "final","_score_", score))
