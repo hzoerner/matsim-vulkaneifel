@@ -30,11 +30,12 @@ public class RunRebalancingTuning {
     private static final String pathToServieArea = "vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp";
     private static final String pathToDRTVehicles = "vulkaneifel-v1.0-25pct/drt-vehicles/100-1_seater-drt-vehicles.xml";
 
-    private static final Double[] alphaValues = {0.2, 0.4, 0.6, 0.8};
-    private static final Double[] betaValues = {0.1, 0.3, 0.7,};
+    private static final Double[] alphaValues = {0.2, 0.4, 0.6, 0.8, 1.0};
+    private static final Double[] betaValues = {0.0, 0.1, 0.3, 0.7, 0.9};
 
-    private static final List<Tuple<Double, Double>> alreadyDone = List.of(new Tuple<>(0.1, 0.2),
-            new Tuple<>(0.1, 0.4));
+    private static final int intervall = 600;
+
+    private static final List<Tuple<Double, Double>> alreadyDone = List.of();
 
     private static final Logger log = Logger.getLogger(RunRebalancingTuning.class);
 
@@ -55,7 +56,7 @@ public class RunRebalancingTuning {
 
                 MultiModeDrtConfigGroup multiModeDrtConfig = MultiModeDrtConfigGroup.get(config);
 
-                String runid = "drt-rebalanc-tuning-alpha-" + alpha + "-beta-" + beta;
+                String runid = "drt-rebalanc-tuning-alpha-" + alpha + "-beta-" + beta + "-V2";
                 config.controler().setRunId(runid);
                 config.controler().setOutputDirectory("rebalanc-tuning/" + runid);
 
@@ -74,6 +75,9 @@ public class RunRebalancingTuning {
 
                     RebalancingParams rebalancingParams = new RebalancingParams();
                     rebalancingParams.addParameterSet(minCostFlowRebalancingStrategyParams);
+                    rebalancingParams.setInterval(intervall);
+                    rebalancingParams.setMaxTimeBeforeIdle(intervall / 2);
+                    rebalancingParams.setMinServiceTime(intervall * 2);
                     drtConfigGroup.addParameterSet(rebalancingParams);
                 });
 
