@@ -102,6 +102,8 @@ for(beta in betas){
   
 }
 
+rm(customer.stats, newEntry, filtered)
+
 waiting.time.data.rebalanc.1 = mutate(waiting.time.data.rebalanc, wait_p95_min = wait_p95 / 60)
 
 ggplot(waiting.time.data.rebalanc.1, aes(alpha, beta, fill = wait_p95_min, size = wait_p95_min)) +
