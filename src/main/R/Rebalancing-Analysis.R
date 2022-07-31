@@ -5,7 +5,7 @@ library(ssh)
 FILES_DIR = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/rebalanc-tuning/"
 REMOTE_DIR = "zoerner@cluster-i.math.tu-berlin.de"
 
-alphas = c("0.2", "0.4", "0.6", "0.8")
+alphas = c("0.2", "0.4", "0.6", "0.8", "1.0")
 betas = c("0.0", "0.1", "0.3", "0.7")
 
 #create ssh connection to math cluster
@@ -53,18 +53,28 @@ for(beta in betas){
     FILE = paste0("drt-rebalanc-tuning-alpha-", alpha, "-beta-", beta, "-V2.drt_customer_stats_drt.csv")
     PATH = paste0(FILES_DIR, FILE)
     
+    FILE_VEHICLES = paste0("drt-rebalanc-tuning-alpha-", alpha, "-beta-", beta, "-V2.drt_vehicle_stats_drt.csv")
+    PATH_VEHICLES = paste0(FILES_DIR, FILE_VEHICLES)
+    
     customer.stats = read.csv2(PATH, dec = ".")
+    vehicle.stats = read.csv2(PATH_VEHICLES, dec = ".")
     
     filtered = customer.stats %>% 
-      filter(iteration == 300) %>%
+      filter(iteration == 500) %>%
       select(wait_p95, wait_average, wait_median)
+    
+    filtered_vehicles = vehicle.stats %>% 
+      filter(iteration == 500) %>%
+      select(totalDistance, totalEmptyDistance)
     
     newEntry = data.frame(
       "alpha" = c(alpha),
       "beta" = c(beta),
       "wait_p95" = filtered$wait_p95,
       "wait_avg" = filtered$wait_average,
-      "wait_med" = filtered$wait_median
+      "wait_med" = filtered$wait_median,
+      "totalDistance" = filtered_vehicles$totalDistance,
+      "totalEmptyDistance" = filtered_vehicles$totalEmptyDistance
     ) %>% mutate(
       alpha = as.numeric(alpha),
       beta = as.numeric(beta)
@@ -84,7 +94,7 @@ for(beta in betas){
   customer.stats = read.csv2(PATH, dec = ".")
   
   filtered = customer.stats %>% 
-    filter(iteration == 300) %>%
+    filter(iteration == 500) %>%
     select(wait_p95, wait_average, wait_median)
   
   newEntry = data.frame(
@@ -104,13 +114,26 @@ for(beta in betas){
 
 rm(customer.stats, newEntry, filtered)
 
-waiting.time.data.rebalanc.1 = mutate(waiting.time.data.rebalanc, wait_p95_min = wait_p95 / 60)
+waiting.time.data.rebalanc.1 = waiting.time.data.rebalanc %>%
+  
+  mutate( wait_p95_min = wait_p95 / 60,
+          emptyDistance_km = totalEmptyDistance / 1000) %>%
+  
+  arrange(wait_p95_min)
 
-ggplot(waiting.time.data.rebalanc.1, aes(alpha, beta, fill = wait_p95_min, size = wait_p95_min)) +
+ggplot(waiting.time.data.rebalanc.1, aes(alpha, beta, size = emptyDistance_km, color = wait_p95_min)) +
   
   geom_point() +
+  
+  scale_color_gradient2(low = "green", mid = "orange", high = "red", midpoint = 17) + 
 
   labs(y = "Beta",
-       x = "Alpha") +
+       x = "Alpha",
+       color = "95-Percentil der Wartezeit",
+       size = "Gesamtleerkilometer") +
   
   theme_bw()
+
+ggplot(waiting.time.data.rebalanc.1, aes(wait_p95_min, emptyDistance_km)) +
+  
+  geom_point()
