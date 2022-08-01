@@ -43,7 +43,10 @@ waiting.time.data.rebalanc = data.frame(
   "beta" = numeric(),
   "wait_p95" = numeric(),
   "wait_avg" = numeric(),
-  "wait_med" = numeric()
+  "wait_med" = numeric(),
+  "totalDistance" = numeric(),
+  "totalEmptyDistance" = numeric()
+  
 )
 
 for(beta in betas){
@@ -104,15 +107,15 @@ for(beta in betas){
     "wait_avg" = filtered$wait_average,
     "wait_med" = filtered$wait_median
   ) %>% mutate(
-    alpha = as.numeric(alpha),
-    beta = as.numeric(beta)
+    alpha = factor(alpha),
+    beta = factor(beta)
   )
   
   waiting.time.data.rebalanc = bind_rows(waiting.time.data.rebalanc, newEntry)
   
 }
 
-rm(customer.stats, newEntry, filtered)
+rm(customer.stats, vehicle.stats, newEntry, filtered, filtered_vehicles)
 
 waiting.time.data.rebalanc.1 = waiting.time.data.rebalanc %>%
   
@@ -133,6 +136,29 @@ ggplot(waiting.time.data.rebalanc.1, aes(alpha, beta, size = emptyDistance_km, c
        size = "Gesamtleerkilometer") +
   
   theme_bw()
+
+point.size = 14
+plot.directory = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/"
+
+ggplot(waiting.time.data.rebalanc.1, aes(factor(alpha), factor(beta), label = round(wait_p95_min, 2))) +
+  
+  geom_point(color = "black", size = point.size) +
+  
+  geom_point(size = point.size - 0.5 ,aes(color = emptyDistance_km)) +
+  
+  geom_text()+ 
+  
+  scale_color_gradient2(low = "green", mid = "orange", high = "red", midpoint = 2900) + 
+  
+#  scale_y_continuous(breaks = as.numeric(betas)) +
+  
+  labs(y = "Beta",
+       x = "Alpha",
+       color = "Gesamtleerkilometer") +
+  
+  theme_bw()
+
+ggsave(filename = paste0(plot.directory, "rebalancing-summary.png"))
 
 ggplot(waiting.time.data.rebalanc.1, aes(wait_p95_min, emptyDistance_km)) +
   
