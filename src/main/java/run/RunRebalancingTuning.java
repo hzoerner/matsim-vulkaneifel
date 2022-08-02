@@ -75,9 +75,6 @@ public class RunRebalancingTuning {
 
                     RebalancingParams rebalancingParams = new RebalancingParams();
                     rebalancingParams.addParameterSet(minCostFlowRebalancingStrategyParams);
-                    rebalancingParams.setInterval(intervall);
-                    rebalancingParams.setMaxTimeBeforeIdle(intervall / 2);
-                    rebalancingParams.setMinServiceTime(intervall * 2);
                     drtConfigGroup.addParameterSet(rebalancingParams);
                 });
 
