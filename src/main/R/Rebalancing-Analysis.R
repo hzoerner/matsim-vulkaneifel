@@ -6,7 +6,7 @@ FILES_DIR = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/rebalanc-tunin
 REMOTE_DIR = "zoerner@cluster-i.math.tu-berlin.de"
 
 alphas = c("0.2", "0.4", "0.6", "0.8", "1.0")
-betas = c("0.0", "0.1", "0.3", "0.7")
+betas = c("0.0", "0.1", "0.3", "0.7", "0.9")
 
 #create ssh connection to math cluster
 connection = ssh_connect(host = REMOTE_DIR, passwd = "")
