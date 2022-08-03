@@ -173,11 +173,6 @@
             <param name="subpopulation" value="person"/>
         </parameterset>
         <parameterset type="strategysettings">
-            <param name="strategyName" value="ChangeSingleTripMode"/>
-            <param name="weight" value="0.15"/>
-            <param name="subpopulation" value="person"/>
-        </parameterset>
-        <parameterset type="strategysettings">
             <param name="strategyName" value="TimeAllocationMutator"/>
             <param name="weight" value="0.05"/>
             <param name="subpopulation" value="person"/>
