@@ -36,8 +36,8 @@ public class RunPlanCase2 {
 
         for(int size = 100; size < 1000; size += 50){
 
-            config.controler().setRunId("fleet-size-" + size + "-plan-case-1");
-            config.controler().setOutputDirectory("study/plan-case-1/fleet-size-" + size);
+            config.controler().setRunId("fleet-size-" + size + "-plan-case-2");
+            config.controler().setOutputDirectory("study/plan-case-2/fleet-size-" + size);
 
             int finalSize = size;
             multiModeDrtConfig.getModalElements().forEach(drtConfigGroup -> {
