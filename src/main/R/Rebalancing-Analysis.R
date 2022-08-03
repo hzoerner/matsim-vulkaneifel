@@ -124,19 +124,6 @@ waiting.time.data.rebalanc.1 = waiting.time.data.rebalanc %>%
   
   arrange(wait_p95_min)
 
-ggplot(waiting.time.data.rebalanc.1, aes(alpha, beta, size = emptyDistance_km, color = wait_p95_min)) +
-  
-  geom_point() +
-  
-  scale_color_gradient2(low = "green", mid = "orange", high = "red", midpoint = 17) + 
-
-  labs(y = "Beta",
-       x = "Alpha",
-       color = "95-Percentil der Wartezeit",
-       size = "Gesamtleerkilometer") +
-  
-  theme_bw()
-
 point.size = 14
 plot.directory = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/"
 
