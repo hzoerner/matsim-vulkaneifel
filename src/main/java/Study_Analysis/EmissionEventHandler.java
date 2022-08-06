@@ -13,8 +13,8 @@ import java.util.Map;
 
 public class EmissionEventHandler implements ColdEmissionEventHandler, WarmEmissionEventHandler {
 
-    private Map<Id<org.matsim.vehicles.Vehicle>, Map<Pollutant, Double>> coldEmissionsPerVehicle = new HashMap<>();
-    private Map<Id<Vehicle>, Map<Pollutant, Double>> warmEmissionsPerVehicle = new HashMap<>();
+    private final Map<Id<org.matsim.vehicles.Vehicle>, Map<Pollutant, Double>> coldEmissionsPerVehicle = new HashMap<>();
+    private final Map<Id<Vehicle>, Map<Pollutant, Double>> warmEmissionsPerVehicle = new HashMap<>();
 
     @Override
     public void handleEvent(ColdEmissionEvent coldEmissionEvent) {
