@@ -81,3 +81,36 @@ ggplot(waiting.time.data.1, aes(fleetsize, wait_p95_min)) +
        y = "95-Percentil der Wartezeit") +
   
   theme_bw()
+
+## Analysis of Vehicle Distance Distribution
+DRT_TRIPS_FILE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1/fleet-size-60-plan-case-1.500.vehicleDistanceStats_drt.csv"
+
+drt.trips.raw = read.csv2(file = DRT_TRIPS_FILE, dec = ".")
+breaks = c(100, 150, 200, 250, 300, 350, 400, Inf)
+levels = c("100 bis 150 km", "150 bis 200 km", "200 bis 250 km", "250 bis 300 km", "300 bis 350 km", "350 bis 400 km", "400 bis 450 km")
+
+#convert meters to kilmoters and edit colnames
+drt.trips.1 = drt.trips.raw %>%
+  mutate_if(is.double, function(x){x/1000}) %>%
+  select(vehicleId, ends_with("_m")) %>%
+  mutate(emptyDistanceShare = emptyDistance_m / drivenDistance_m,
+         distanceGroup = cut(x = drivenDistance_m, breaks = breaks, labels = levels),
+         distanceGroup = factor(distanceGroup)
+         )
+
+colnames(drt.trips.1) = str_replace(colnames(drt.trips.1), "_m", "_km")
+
+drt.trips.sum = drt.trips.1 %>%
+  group_by(distanceGroup) %>%
+  summarise(n = n())
+
+ggplot(drt.trips.sum, aes(x = distanceGroup, y = n)) +
+  
+  geom_col(fill = "darkblue") +
+  
+  geom_text(aes(label = n), nudge_y = .5) +
+  
+  labs(x = "Tägliche Distanz",
+       y = "Anzahl") +
+  
+  theme_bw()
