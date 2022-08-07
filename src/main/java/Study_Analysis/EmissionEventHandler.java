@@ -19,7 +19,7 @@ public class EmissionEventHandler implements ColdEmissionEventHandler, WarmEmiss
     @Override
     public void handleEvent(ColdEmissionEvent coldEmissionEvent) {
 
-        var vehicleId = coldEmissionEvent.getVehicleId();
+        Id<Vehicle> vehicleId = coldEmissionEvent.getVehicleId();
 
         if(coldEmissionsPerVehicle.containsKey(vehicleId)){
 
