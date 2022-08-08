@@ -5,7 +5,6 @@ import org.apache.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.emissions.Pollutant;
 import org.matsim.contrib.emissions.events.ColdEmissionEvent;
 import org.matsim.contrib.emissions.events.ColdEmissionEventHandler;
@@ -21,17 +20,14 @@ import java.util.Map;
 
 public class EmissionEventHandler implements ColdEmissionEventHandler, WarmEmissionEventHandler {
 
-    private Map<Id<Vehicle>, Map<Pollutant, Double>> coldEmissionsPerVehicle;
-    private Map<Id<Vehicle>, Map<Pollutant, Double>> warmEmissionsPerVehicle;
+    private final Map<Id<Vehicle>, Map<Pollutant, Double>> coldEmissionsPerVehicle;
+    private final Map<Id<Vehicle>, Map<Pollutant, Double>> warmEmissionsPerVehicle;
 
-    private Geometry dilutionArea;
-    private Map<Id<Link>, ? extends Link> links;
-
-    private int counter = 0;
-
-    private final Logger logger = LogManager.getLogger(EmissionEventHandler.class);
+    private final Geometry dilutionArea;
+    private final Map<Id<Link>, ? extends Link> links;
 
     public EmissionEventHandler(String shapeFilePath, String networkFilePath){
+        Logger logger = LogManager.getLogger(EmissionEventHandler.class);
         logger.info("Initalized EmissionEventHandler...");
 
         coldEmissionsPerVehicle = new HashMap<>();
@@ -68,10 +64,6 @@ public class EmissionEventHandler implements ColdEmissionEventHandler, WarmEmiss
 
         if(!isLinkInDilutionArea(warmEmissionEvent.getLinkId())) return;
 
-        if(counter++ == 1247){
-
-            System.out.println("STOP");
-        }
         var vehicleId = warmEmissionEvent.getVehicleId();
 
         if(warmEmissionsPerVehicle.containsKey(vehicleId)){
@@ -113,10 +105,4 @@ public class EmissionEventHandler implements ColdEmissionEventHandler, WarmEmiss
 
         return dilutionArea.covers(MGC.coord2Point(links.get(linkId).getCoord()));
     }
-
-    /*
-    * TODO
-    *  add shape filter
-    *  add vehicle type (perhaps in Run class)
-    * */
 }

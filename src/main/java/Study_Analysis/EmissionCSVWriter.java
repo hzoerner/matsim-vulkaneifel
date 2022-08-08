@@ -2,8 +2,6 @@ package Study_Analysis;
 
 import org.jboss.logging.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.network.Network;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.contrib.emissions.Pollutant;
 import org.matsim.contrib.emissions.events.EmissionEventsReader;
@@ -11,8 +9,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.EventsUtils;
-import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.vehicles.*;
+import org.matsim.vehicles.Vehicle;
 import picocli.CommandLine;
 
 import java.io.BufferedWriter;
@@ -59,11 +56,9 @@ public class EmissionCSVWriter implements MATSimAppCommand {
         logger.info("++++++++++ Start to read and process emission events file ++++++++++");
         EmissionEventHandler handler = processEvents(emissionsEventFile, shapeFilePath, cfg.network().getInputFile());
 
-        Scenario scenario = ScenarioUtils.loadScenario(cfg);
-
         logger.info("++++++++++ Convert events to csv format ++++++++++");
-        List<String> warmEmissionsAsCSV = convertToCSV(handler.getWarmEmissionsPerVehicle(), scenario.getVehicles());
-        List<String> coldEmissionsAsCSV = convertToCSV(handler.getColdEmissionsPerVehicle(), scenario.getVehicles());
+        List<String> warmEmissionsAsCSV = convertToCSV(handler.getWarmEmissionsPerVehicle());
+        List<String> coldEmissionsAsCSV = convertToCSV(handler.getColdEmissionsPerVehicle());
 
         output = output.endsWith("\\") ? output: output + "\\";
         String outputWarmEventsFile = output + runId + "_warm_emissions.csv";
@@ -72,7 +67,7 @@ public class EmissionCSVWriter implements MATSimAppCommand {
         logger.info("++++++++++ Print warm emissions to " + outputWarmEventsFile + " ++++++++++");
         printToFile(warmEmissionsAsCSV, outputWarmEventsFile);
         logger.info("++++++++++ Print cold emissions to " + outputColdEventsFile + " ++++++++++");
-        printToFile(coldEmissionsAsCSV, outputWarmEventsFile);
+        printToFile(coldEmissionsAsCSV, outputColdEventsFile);
 
         logger.info("++++++++++ Analysis is done. Continue in R and have fun :) ++++++++++");
         return 0;
@@ -86,13 +81,11 @@ public class EmissionCSVWriter implements MATSimAppCommand {
         manager.addHandler(handler);
         new EmissionEventsReader(manager).readFile(eventsFile);
 
-
         return handler;
     }
 
-    private static List<String> convertToCSV(Map<Id<Vehicle>, Map<Pollutant, Double>> emissions, Vehicles vehicles){
+    private static List<String> convertToCSV(Map<Id<Vehicle>, Map<Pollutant, Double>> emissions){
 
-        Map<Id<Vehicle>, Vehicle> vehicleMap = vehicles.getVehicles();
         List<String> asCSV = new ArrayList<>();
 
         var pollutants = emissions.values().stream()
@@ -101,7 +94,7 @@ public class EmissionCSVWriter implements MATSimAppCommand {
                 .distinct()
                 .collect(Collectors.toList());
 
-        String header1 = "vehicleId,vehicleType,";
+        String header1 = "vehicleId,";
         String header2 = pollutants.stream()
                 .map(Enum::name)
                 .map(name -> name + ",")
@@ -112,10 +105,8 @@ public class EmissionCSVWriter implements MATSimAppCommand {
 
         emissions.keySet().forEach(vehicleId -> {
 
-            String type = vehicleMap.get(vehicleId).getType().getId().toString();
-
             StringBuilder csv = new StringBuilder(vehicleId.toString());
-            csv.append(type).append(",");
+            csv.append(",");
             var vehicleEmissions = emissions.get(vehicleId);
 
             for(var pollutant: pollutants){
