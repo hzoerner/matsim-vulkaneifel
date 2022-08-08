@@ -1,13 +1,14 @@
 package Study_Analysis;
 
+import org.jboss.logging.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.application.MATSimAppCommand;
 import org.matsim.contrib.emissions.Pollutant;
+import org.matsim.contrib.emissions.events.EmissionEventsReader;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.vehicles.Vehicle;
 import picocli.CommandLine;
-import prepare.CreateRegionalTrainLine;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -20,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @CommandLine.Command(
-        name = "emission analysis",
+        name = "emissions",
         description = {"runs event handler for emission events"}
 )
 
@@ -32,34 +33,47 @@ public class EmissionCSVWriter implements MATSimAppCommand {
     @CommandLine.Option(names = "--output", description = "output directory", required = true)
     private String output;
 
+    @CommandLine.Option(names = "--shapeFilePath", description = "path to dilutionArea", required = true)
+    private String shapeFilePath;
+
     @CommandLine.Option(names = "--runId", description = "run id for example base case, plan case ", required = true)
     private String runId;
+
+    private Logger logger = Logger.getLogger(EmissionCSVWriter.class);
 
     public static void main(String[] args) { System.exit(new CommandLine(new EmissionCSVWriter()).execute(args));}
 
     @Override
     public Integer call() throws Exception {
-        EmissionEventHandler handler = processEvents(emissionsEventFile);
 
+        logger.info("++++++++++ Start to read and process emission events file ++++++++++");
+        EmissionEventHandler handler = processEvents(emissionsEventFile, shapeFilePath);
+
+        logger.info("++++++++++ Convert events to csv format ++++++++++");
         List<String> warmEmissionsAsCSV = convertToCSV(handler.getWarmEmissionsPerVehicle());
         List<String> coldEmissionsAsCSV = convertToCSV(handler.getColdEmissionsPerVehicle());
 
-        output = output.endsWith("/") ? output: output + "/";
-        String outputFile = output + runId + "_emissions.csv";
+        output = output.endsWith("\\") ? output: output + "\\";
+        String outputWarmEventsFile = output + runId + "_warm_emissions.csv";
+        String outputColdEventsFile = output + runId + "_cold_emissions.csv";
 
-        printToFile(warmEmissionsAsCSV, outputFile);
-        printToFile(coldEmissionsAsCSV, outputFile);
+        logger.info("++++++++++ Print warm emissions to " + outputWarmEventsFile + " ++++++++++");
+        printToFile(warmEmissionsAsCSV, outputWarmEventsFile);
+        logger.info("++++++++++ Print cold emissions to " + outputColdEventsFile + " ++++++++++");
+        printToFile(coldEmissionsAsCSV, outputWarmEventsFile);
 
+        logger.info("++++++++++ Analysis is done. Continue in R and have fun :) ++++++++++");
         return 0;
     }
 
-    private static EmissionEventHandler processEvents(String eventsFile){
+    private static EmissionEventHandler processEvents(String eventsFile, String shapeFilePath){
 
         EventsManager manager = EventsUtils.createEventsManager();
-        EmissionEventHandler handler = new EmissionEventHandler();
+        EmissionEventHandler handler = new EmissionEventHandler(shapeFilePath);
 
         manager.addHandler(handler);
-        EventsUtils.readEvents(manager, eventsFile);
+        new EmissionEventsReader(manager).readFile(eventsFile);
+
 
         return handler;
     }
@@ -89,8 +103,15 @@ public class EmissionCSVWriter implements MATSimAppCommand {
             var vehicleEmissions = emissions.get(vehicleId);
 
             for(var pollutant: pollutants){
-                String emissionAsString = vehicleEmissions.get(pollutant).toString();
-                csv.append(emissionAsString).append(",");
+
+                if(vehicleEmissions.containsKey(pollutant)){
+                    String emissionAsString = vehicleEmissions.get(pollutant).toString();
+                    csv.append(emissionAsString).append(",");
+                } else {
+
+                    csv.append(",");
+                }
+
             }
 
             asCSV.add(csv.toString());
