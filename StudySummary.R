@@ -4,64 +4,97 @@ library(readr)
 
 ############## DOWNLOAD FILES FROM REMOTE REPOSITORY ####################
 
-LOCAL_DIR = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-"
+LOCAL_DIR = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/"
 REMOTE_DIR = "zoerner@cluster-i.math.tu-berlin.de"
 
-FILES_DIR = "/net/ils/zoerner/matsim-vulkaneifel/study/plan-case-"
-
 fleetsize_1 = seq(20,160,10)
+fleetsize_2 = seq(100, 900, 100)
 
-#create ssh connection to math cluster
-connection = ssh_connect(host = REMOTE_DIR, passwd = "")
-
-for(size in fleetsize_1){
+downloadFromCluster <- function(password, plan_case = c(1,2), fleetsize){
   
-  RUN_DIR = paste0(FILES_DIR, "1", "/fleet-size-", size, "/")
+  FILES_DIR = "/net/ils/zoerner/matsim-vulkaneifel/study/plan-case-"
   
-  files = capture.output(
-    ssh_exec_wait(connection, 
-                  command = paste0("ls ", RUN_DIR))
-  )
+  files = character()
   
-  files = files[str_ends(files, ".csv")]
-  print(files)
-  
-  for(file in files){
-    print(paste0(RUN_DIR, file))
-    scp_download(connection, files = paste0(RUN_DIR, file), to = paste0(LOCAL_DIR, "1/"))
+  if(!is.vector(fleetsize)){
+    warning("Argument fleetsize needs to be an vector!")
+    return(NULL)
   }
+  
+  #create ssh connection to math cluster
+  connection = ssh_connect(host = REMOTE_DIR, passwd = password)
+  
+  for(size in fleetsize){
+    
+    RUN_DIR = paste0(FILES_DIR, plan_case, "/fleet-size-", size, "/")
+    
+    files = capture.output(
+      ssh_exec_wait(connection, 
+                    command = paste0("ls ", RUN_DIR))
+    )
+    
+    files = files[str_ends(files, ".csv")]
+    print(files)
+    
+    for(file in files){
+      print(paste0(RUN_DIR, file))
+      scp_download(connection, files = paste0(RUN_DIR, file), to = paste0(LOCAL_DIR, plan_case, "/"))
+    }
+  }
+  
+  ssh_disconnect(connection)
+  
+  return(files)
 }
 
-ssh_disconnect(connection)
+pw = ""
+files_1 = downloadFromCluster(password = pw, plan_case = 1, fleetsize = fleetsize_1)
+files_2 = downloadFromCluster(password = pw, plan_case = 2, fleetsize = fleetsize_2)
 
 ############## ANALYZE WAITING TIME AND VEHICLE DISTANCES ####################
 
-waiting.time.data = data.frame(
-  "fleetsize" = numeric(),
-  "wait_p95" = numeric()
-)
-
-for(size in fleetsize_1){
+summarizeOutput <- function(fleetsize, plan_case = c(1,2), LOCAL_DIR){
   
-  LOCAL_CUSTOMERSTATS_PATH = paste0(LOCAL_DIR, "1", "/", "fleet-size-", size, "-plan-case-1.drt_customer_stats_drt.csv"  )
-  customer.stats = read.csv2(file = LOCAL_CUSTOMERSTATS_PATH, dec = ".")
-  
-  filtered = customer.stats %>% 
-    filter(iteration == 500) %>%
-    select(wait_p95, wait_average, wait_median)
-  
-  newEntry = data.frame(
-    "fleetsize" = size,
-    "wait_p95" = filtered$wait_p95
+  waiting.time.data = data.frame(
+    "fleetsize" = numeric(),
+    "wait_p95" = numeric()
   )
   
-  waiting.time.data = bind_rows(waiting.time.data, newEntry)
-  rm(newEntry)
+  for(size in fleetsize){
+    
+    LOCAL_CUSTOMERSTATS_PATH = paste0(LOCAL_DIR, "plan-case-", plan_case, "/", "fleet-size-", size, "-plan-case-", plan_case, ".drt_customer_stats_drt.csv"  )
+    customer.stats = read.csv2(file = LOCAL_CUSTOMERSTATS_PATH, dec = ".")
+    
+    if(length(customer.stats$iteration[customer.stats$iteration == 500]) != 0){
+      
+      filtered = customer.stats %>% 
+        filter(iteration == 500) %>%
+        select(wait_p95, wait_average, wait_median)
+      
+      newEntry = data.frame(
+        "fleetsize" = size,
+        "wait_p95" = filtered$wait_p95
+      )
+      
+      waiting.time.data = bind_rows(waiting.time.data, newEntry)
+      rm(newEntry)
+    } else{
+      
+      print(
+        paste0("File ", "fleet-size-", size, "-plan-case-", plan_case, ".drt_customer_stats_drt.csv", "does not contain iteration 500 ...")
+      )
+    }
+  }
+  
+  return(waiting.time.data %>%
+           mutate(wait_p95_min = wait_p95 / 60))
 }
 
-waiting.time.data.1 = waiting.time.data %>%
-  
-  mutate(wait_p95_min = wait_p95 / 60)
+fleetsize_2 = fleetsize_2[fleetsize_2 != 400]
+fleetsize_1 = fleetsize_1[fleetsize_1 != 160]
+
+waiting.time.data.1 = summarizeOutput(fleetsize = fleetsize_1, plan_case = 1, LOCAL_DIR = LOCAL_DIR)
+waiting.time.data.2 = summarizeOutput(fleetsize = fleetsize_2, plan_case = 2, LOCAL_DIR = LOCAL_DIR)
 
 size = 2
 
