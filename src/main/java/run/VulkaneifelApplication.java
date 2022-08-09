@@ -1,5 +1,6 @@
 package run;
 
+import Study_Analysis.EmissionCSVWriter;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.emissions.AirPollutionByVehicleCategory;
 import org.matsim.application.prepare.population.CleanPopulation;
@@ -23,7 +24,7 @@ import java.util.List;
         DownSamplePopulation.class
 })
 @MATSimApplication.Analysis({
-        AirPollutionByVehicleCategory.class
+        AirPollutionByVehicleCategory.class, EmissionCSVWriter.class
 })
 
 public class VulkaneifelApplication extends MATSimApplication {
