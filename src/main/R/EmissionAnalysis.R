@@ -1,55 +1,114 @@
 library(tidyverse)
+library(sf)
 
 ##Emission Analysis for Base Case and both Plan Cases
 
+prepare_trips <- function(tripsFilePath, shapeFilePath){
+  
+  
+  trips.raw = read.csv2(tripsFilePath)
+  shape = st_read(shapeFilePath)
+  
+  trips.start = trips.raw %>%
+    st_as_sf(coords = c("start_x", "start_y"), crs = 25832) %>%
+    st_filter(shape)
+  
+  trips.end = trips.raw %>%
+    st_as_sf(coords = c("end_x", "end_y"), crs = 25832) %>%
+    st_filter(shape)
+  
+  trips.filtered = semi_join(as.data.frame(trips.start), 
+                                       as.data.frame(trips.end), by = "trip_id")
+  
+  base.case.pkm = trips.filtered %>%
+    
+    select(person, trip_id, longest_distance_mode, traveled_distance) %>%
+    
+    rename("mode" = "longest_distance_mode") %>%
+    
+    mutate(mode = ifelse(mode == "ride", "car", mode)) %>%
+    
+    group_by(mode) %>%
+    
+    summarise(pkm = sum(traveled_distance) / 1000) %>%
+    
+    ungroup() %>%
+    
+    mutate(mode_ger = ifelse(mode == "car", "MIV",
+                             ifelse(mode == "pt", "ÖPNV",
+                                    ifelse(mode == "drt", "DRT", mode)))
+    )
+  
+  base.case.pkm
+}
+
+merge_with_emissions <- function(trips, emissionFilePath){
+  
+  if(!is.data.frame(trips)) {
+    print("TRIPS must be a data frame!!!")
+    return(NULL)
+  }
+  
+  if("mode_ger" %in% colnames(trips) == FALSE){
+    
+    print("TRIPS needs a col named 'mode_ger' with german translation for mode names pt = 'ÖPNV' e.g.")
+  }
+  
+  emissions.raw = read.csv(file = emissionFilePath)
+  
+  emissions.1 = emissions.raw %>%
+    
+    select(vehicleId, CO, CO2_TOTAL, PM, NOx, NO2) %>%
+    
+    filter(!str_detect(vehicleId, "CustomTrain")) %>%
+    
+    mutate(mode = ifelse(str_detect(vehicleId, "car"), "MIV", 
+                         ifelse(str_detect(vehicleId, "drt"), "DRT", "ÖPNV")))
+  
+  emissions.sum = emissions.1 %>%
+    
+    select(-vehicleId) %>%
+    
+    group_by(mode) %>%
+    
+    summarise_all(sum) %>%
+    
+    ungroup() %>%
+    
+    mutate_if(is.double, function(x){ x / 1000}) %>%
+    
+    left_join(trips, by = c("mode" = "mode_ger")) %>%
+    
+    select(- mode.y) %>%
+    
+    mutate(CO2_per_pkm = CO2_TOTAL / pkm)
+  
+  emissions.sum
+}
+
+SHAPEFILE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp"
+
 EMISSIONS_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/baseCase_warm_emissions.csv"
-base.case.raw = read.csv(file = EMISSIONS_BASE_CASE)
+TRIPS_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/165/165.output_trips.csv.gz"
 
-base.case.1 = base.case.raw %>%
-  
-  select(vehicleId, CO, CO2_TOTAL, PM, NOx, NO2) %>%
-  
-  filter(!str_detect(vehicleId, "CustomTrain")) %>%
-  
-  mutate(mode = ifelse(str_detect(vehicleId, "car"), "MIV", "ÖPNV"))
+base.case.pkm = prepare_trips(tripsFilePath = TRIPS_BASE_CASE, shapeFilePath = SHAPEFILE)
 
-base.case.sum = base.case.1 %>%
-  
-  select(-vehicleId) %>%
-  
-  group_by(mode) %>%
-  
-  summarise_all(sum) %>%
-  
-  ungroup() %>%
-  
-  mutate_if(is.double, function(x){ x / 1000})
+base.case.sum = merge_with_emissions(trips = base.case.pkm, emissionFilePath = EMISSIONS_BASE_CASE)
 
+### Clean up
 rm(base.case.raw)
 
+########### PLAN CASE 1 ################
 EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_warm_emissions.csv"
-plan.case.1.raw = read.csv(file = EMISSIONS_PLAN_CASE_1)
+TRIPS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-60/fleet-size-60-plan-case-1.output_trips.csv.gz"
 
-plan.case.1.1 = plan.case.1.raw %>%
-  
-  select(vehicleId, CO, CO2_TOTAL, PM, NOx, NO2) %>%
-  
-  filter(!str_detect(vehicleId, "CustomTrain")) %>%
-  
-  mutate(mode = ifelse(str_detect(vehicleId, "car"), "MIV",
-                       ifelse(str_detect(vehicleId, "pt"), "ÖPNV", "DRT")))
+plan.case.1.pkm = prepare_trips(tripsFilePath = TRIPS_PLAN_CASE_1, shapeFilePath = SHAPEFILE)
 
-plan.case.1.sum = plan.case.1.1 %>%
+emissions.1.sum = merge_with_emissions(trips = plan.case.1.pkm, emissionFilePath = EMISSIONS_PLAN_CASE_1)
+
+emissions.1.long = emissions.1.sum %>%
   
-  select(-vehicleId) %>%
-  
-  group_by(mode) %>%
-  
-  summarise_all(sum) %>%
-  
-  ungroup() %>%
-  
-  mutate_if(is.double, function(x){ x / 1000}) %>%
+  select(-ends_with("pkm")) %>%
   
   pivot_longer(cols = -mode, names_to = "emission_type", values_to = "emission") %>%
   
