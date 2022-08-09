@@ -7,7 +7,7 @@ library(readr)
 LOCAL_DIR = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/"
 REMOTE_DIR = "zoerner@cluster-i.math.tu-berlin.de"
 
-fleetsize_1 = seq(20,160,10)
+fleetsize_1 = seq(20,150,10)
 fleetsize_2 = seq(100, 900, 100)
 
 downloadFromCluster <- function(password, plan_case = c(1,2), fleetsize){
@@ -38,7 +38,7 @@ downloadFromCluster <- function(password, plan_case = c(1,2), fleetsize){
     
     for(file in files){
       print(paste0(RUN_DIR, file))
-      scp_download(connection, files = paste0(RUN_DIR, file), to = paste0(LOCAL_DIR, plan_case, "/"))
+      scp_download(connection, files = paste0(RUN_DIR, file), to = paste0(LOCAL_DIR,"plan-case-", plan_case, "/"))
     }
   }
   
@@ -78,11 +78,6 @@ summarizeOutput <- function(fleetsize, plan_case = c(1,2), LOCAL_DIR){
       
       waiting.time.data = bind_rows(waiting.time.data, newEntry)
       rm(newEntry)
-    } else{
-      
-      print(
-        paste0("File ", "fleet-size-", size, "-plan-case-", plan_case, ".drt_customer_stats_drt.csv", "does not contain iteration 500 ...")
-      )
     }
   }
   
