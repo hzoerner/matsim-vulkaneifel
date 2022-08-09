@@ -42,7 +42,7 @@ prepare_trips <- function(tripsFilePath, shapeFilePath){
   base.case.pkm
 }
 
-merge_with_emissions <- function(trips, emissionFilePath){
+merge_with_emissions <- function(trips, warmEmissionFilePath, coldEmissionFilePath){
   
   if(!is.data.frame(trips)) {
     print("TRIPS must be a data frame!!!")
@@ -54,9 +54,13 @@ merge_with_emissions <- function(trips, emissionFilePath){
     print("TRIPS needs a col named 'mode_ger' with german translation for mode names pt = 'ÖPNV' e.g.")
   }
   
-  emissions.raw = read.csv(file = emissionFilePath)
+  emissions.raw = read.csv(file = warmEmissionFilePath)
+  
+  emissions.cold.raw = read.csv(file = coldEmissionFilePath)
   
   emissions.1 = emissions.raw %>%
+    
+    bind_rows(emissions.cold.raw) %>%
     
     select(vehicleId, CO, CO2_TOTAL, PM, NOx, NO2) %>%
     
@@ -88,23 +92,22 @@ merge_with_emissions <- function(trips, emissionFilePath){
 
 SHAPEFILE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp"
 
-EMISSIONS_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/baseCase_warm_emissions.csv"
+WARM_EMISSIONS_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/baseCase_warm_emissions.csv"
+COLD_EMISSIONS_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/baseCase_cold_emissions.csv"
 TRIPS_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/165/165.output_trips.csv.gz"
 
 base.case.pkm = prepare_trips(tripsFilePath = TRIPS_BASE_CASE, shapeFilePath = SHAPEFILE)
 
-base.case.sum = merge_with_emissions(trips = base.case.pkm, emissionFilePath = EMISSIONS_BASE_CASE)
-
-### Clean up
-rm(base.case.raw)
+base.case.sum = merge_with_emissions(trips = base.case.pkm, warmEmissionFilePath = WARM_EMISSIONS_BASE_CASE, coldEmissionFilePath = COLD_EMISSIONS_BASE_CASE)
 
 ########### PLAN CASE 1 ################
-EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_warm_emissions.csv"
+WARM_EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_warm_emissions.csv"
+COLD_EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_cold_emissions.csv"
 TRIPS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-60/fleet-size-60-plan-case-1.output_trips.csv.gz"
 
 plan.case.1.pkm = prepare_trips(tripsFilePath = TRIPS_PLAN_CASE_1, shapeFilePath = SHAPEFILE)
 
-emissions.1.sum = merge_with_emissions(trips = plan.case.1.pkm, emissionFilePath = EMISSIONS_PLAN_CASE_1)
+emissions.1.sum = merge_with_emissions(trips = plan.case.1.pkm, warmEmissionFilePath = WARM_EMISSIONS_PLAN_CASE_1, coldEmissionFilePath = COLD_EMISSIONS_PLAN_CASE_1)
 
 emissions.1.long = emissions.1.sum %>%
   
@@ -115,7 +118,7 @@ emissions.1.long = emissions.1.sum %>%
   mutate(emission_type = factor(emission_type, levels = c("CO2_TOTAL", "CO", "NO2", "NOx", "PM")))
 
 ## Plot total emission for each emission category
-ggplot(filter(plan.case.1.sum, mode != "MIV"), aes(mode, emission, fill = mode)) +
+ggplot(filter(emissions.1.long, mode != "MIV"), aes(mode, emission, fill = mode)) +
   
   geom_col() +
   
@@ -127,4 +130,14 @@ ggplot(filter(plan.case.1.sum, mode != "MIV"), aes(mode, emission, fill = mode))
   
   theme(legend.position = "none")
 
-rm(plan.case.1.raw)
+pt.vs.drt = emissions.1.sum %>%
+  
+  filter(mode == "DRT") %>%
+  
+  bind_rows(base.case.sum)
+
+ggplot(pt.vs.drt, aes(mode, CO2_per_pkm)) +
+  
+  geom_col() +
+  
+  labs(y = "CO2 / pkm in kg")
