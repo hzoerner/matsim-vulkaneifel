@@ -1,6 +1,5 @@
 library(tidyverse)
 library(ssh)
-library(readr)
 
 ############## DOWNLOAD FILES FROM REMOTE REPOSITORY ####################
 
@@ -8,7 +7,7 @@ LOCAL_DIR = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/"
 REMOTE_DIR = "zoerner@cluster-i.math.tu-berlin.de"
 
 fleetsize_1 = seq(20,150,10)
-fleetsize_2 = seq(100, 900, 100)
+fleetsize_2 = seq(100, 800, 50)
 
 downloadFromCluster <- function(password, plan_case = c(1,2), fleetsize){
   
@@ -63,6 +62,7 @@ summarizeOutput <- function(fleetsize, plan_case = c(1,2), LOCAL_DIR){
   for(size in fleetsize){
     
     LOCAL_CUSTOMERSTATS_PATH = paste0(LOCAL_DIR, "plan-case-", plan_case, "/", "fleet-size-", size, "-plan-case-", plan_case, ".drt_customer_stats_drt.csv"  )
+    print(LOCAL_CUSTOMERSTATS_PATH)
     customer.stats = read.csv2(file = LOCAL_CUSTOMERSTATS_PATH, dec = ".")
     
     if(length(customer.stats$iteration[customer.stats$iteration == 500]) != 0){
@@ -85,7 +85,7 @@ summarizeOutput <- function(fleetsize, plan_case = c(1,2), LOCAL_DIR){
            mutate(wait_p95_min = wait_p95 / 60))
 }
 
-fleetsize_2 = fleetsize_2[fleetsize_2 != 400]
+fleetsize_2 = fleetsize_2[!fleetsize_2 %in% c("450", "750")]
 fleetsize_1 = fleetsize_1[fleetsize_1 != 160]
 
 waiting.time.data.1 = summarizeOutput(fleetsize = fleetsize_1, plan_case = 1, LOCAL_DIR = LOCAL_DIR)
@@ -114,8 +114,8 @@ ggplot(waiting.time.data.1, aes(fleetsize, wait_p95_min)) +
 DRT_TRIPS_FILE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1/fleet-size-60-plan-case-1.500.vehicleDistanceStats_drt.csv"
 
 drt.trips.raw = read.csv2(file = DRT_TRIPS_FILE, dec = ".")
-breaks = c(100, 150, 200, 250, 300, 350, 400, Inf)
-levels = c("100 bis 150 km", "150 bis 200 km", "200 bis 250 km", "250 bis 300 km", "300 bis 350 km", "350 bis 400 km", "400 bis 450 km")
+breaks = c(100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, Inf)
+levels = c("100 bis 150 km", "150 bis 200 km", "200 bis 250 km", "250 bis 300 km", "300 bis 350 km", "350 bis 400 km", "400 bis 450 km", "450 bis 500 km", "500 bis 550 km", "550 bis 600 km", "600 bis 650 km", "> 650 km")
 
 #convert meters to kilmoters and edit colnames
 drt.trips.1 = drt.trips.raw %>%
@@ -140,5 +140,49 @@ ggplot(drt.trips.sum, aes(x = distanceGroup, y = n)) +
   
   labs(x = "Tägliche Distanz",
        y = "Anzahl") +
+  
+  theme_bw()
+
+drt2 = read.csv2("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-400/fleet-size-400-plan-case-2.500.vehicleDistanceStats_drt.csv", dec = ".")
+
+drt2.1 = drt2 %>% 
+  
+  mutate_if(is.double, function(x){ x /1000 }) %>%
+  
+  mutate(emptyDistance_share = emptyDistance_m / drivenDistance_m,
+         distanceGroup = cut(x = drivenDistance_m, breaks = breaks, labels = levels),
+         distanceGroup = factor(distanceGroup)) %>%
+  
+  arrange(emptyDistance_share)
+
+drt2.sum = drt2.1 %>%
+  group_by(distanceGroup) %>%
+  summarise(n = n())
+
+ggplot(drt2.sum, aes(x = distanceGroup, y = n)) +
+  
+  geom_col(fill = "darkblue") +
+  
+  geom_text(aes(label = n), nudge_y = 3) +
+  
+  labs(x = "Tägliche Distanz",
+       y = "Anzahl") +
+  
+  theme_bw() +
+  
+  theme(axis.text.x = element_text(angle = 90))
+
+ggplot(waiting.time.data.2, aes(fleetsize, wait_p95_min)) +
+  
+  geom_line() +
+  
+  geom_point(size = size) +
+  
+  geom_hline(aes(yintercept = 15), color = "darkred", size = size) +
+  
+  coord_cartesian(ylim = c(0, 50)) +
+  
+  labs(x = "Flottengröße",
+       y = "95-Percentil der Wartezeit") +
   
   theme_bw()

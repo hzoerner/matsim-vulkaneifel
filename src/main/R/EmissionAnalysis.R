@@ -105,6 +105,7 @@ base.case.pkm = prepare_legs(legsFilePath = LEGS_BASE_CASE, shapeFilePath = SHAP
 base.case.sum = merge_with_emissions(legs = base.case.pkm, warmEmissionFilePath = WARM_EMISSIONS_BASE_CASE, coldEmissionFilePath = COLD_EMISSIONS_BASE_CASE)
 
 ########### PLAN CASE 1 ################
+
 WARM_EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_warm_emissions.csv"
 COLD_EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_cold_emissions.csv"
 LEGS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-60/fleet-size-60-plan-case-1.output_legs.csv.gz"
@@ -137,6 +138,50 @@ ggplot(filter(emissions.1.long, mode != "MIV"), aes(mode, emission, fill = mode)
 ggsave(filename = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/Planfall_1_Gesamtemissionen.jpg")
 
 pt.vs.drt = emissions.1.sum %>%
+  
+  filter(mode == "DRT") %>%
+  
+  bind_rows(base.case.sum)
+
+ggplot(pt.vs.drt, aes(mode, CO2_per_pkm)) +
+  
+  geom_col() +
+  
+  labs(y = "CO2 / pkm in kg")
+
+########### PLAN CASE 2 ################
+WARM_EMISSIONS_PLAN_CASE_2 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-2_warm_emissions.csv"
+COLD_EMISSIONS_PLAN_CASE_2 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-2_cold_emissions.csv"
+LEGS_PLAN_CASE_2 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-400/fleet-size-400-plan-case-2.output_legs.csv.gz"
+
+plan.case.2.pkm = prepare_legs(legsFilePath = LEGS_PLAN_CASE_2, shapeFilePath = SHAPEFILE)
+
+emissions.2.sum = merge_with_emissions(legs = plan.case.2.pkm, warmEmissionFilePath = WARM_EMISSIONS_PLAN_CASE_2, coldEmissionFilePath = COLD_EMISSIONS_PLAN_CASE_2)
+
+emissions.2.long = emissions.2.sum %>%
+  
+  select(-ends_with("pkm")) %>%
+  
+  pivot_longer(cols = -mode, names_to = "emission_type", values_to = "emission") %>%
+  
+  mutate(emission_type = factor(emission_type, levels = c("CO2_TOTAL", "CO", "NO2", "NOx", "PM")))
+
+## Plot total emission for each emission category
+ggplot(filter(emissions.2.long, mode != "MIV"), aes(mode, emission, fill = mode)) +
+  
+  geom_col() +
+  
+  facet_wrap(~ emission_type, scales = "free") +
+  
+  labs(x = "Verkehrsmittel", y = "Gesamtemisssionen in kg") +
+  
+  theme_bw() +
+  
+  theme(legend.position = "none")
+
+ggsave(filename = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/Planfall_1_Gesamtemissionen.jpg")
+
+pt.vs.drt = emissions.2.sum %>%
   
   filter(mode == "DRT") %>%
   
