@@ -12,9 +12,8 @@ import org.matsim.vehicles.VehicleType;
 
 public class AddDrtToTransitVehicles {
 
-    private static final String ptVehiclesFile = "C:\\Users\\ACER\\IdeaProjects\\matsim-vulkaneifel\\output\\study\\fleet-size-60\\fleet-size-60-plan-case-1.output_transitVehicles.xml.gz";
-    private static final int fleetsize = 60;
-    private static final String runId = "fleet-size-60-plan-case-1";
+    private static final String ptVehiclesFile = "C:\\Users\\ACER\\IdeaProjects\\matsim-vulkaneifel\\output\\study\\fleet-size-400\\fleet-size-400-plan-case-2.output_transitVehicles.xml.gz";
+    private static final int fleetsize = 400;
 
     public static void main(String[] args) {
 
