@@ -432,3 +432,57 @@ plt.diff.abs = ggplot(distance_share_abs_vs, aes(Distanzgruppe, Differenz, fill 
 plt.diff.abs
 
 save_plot_as_jpg(plt.diff, paste0("distance_share_diff","_run_id", "final","_score_", score))
+
+
+####            PART 4: Create nice plots for the documentation             ####
+
+distance_share_vs_long = distance_share_vs %>%
+  select(-Differenz) %>%
+  pivot_longer(cols = c(Sim, MiD), names_to = "Source", values_to = "share") %>%
+  mutate(Source_ext = ifelse(Source == "Sim", "Open-Vulkaneifel-Scenario", "Mobilität in Deutschland 2017"))
+
+plt.distance.share.both = ggplot(distance_share_vs_long, aes(x = Distanzgruppe, y = share, fill = Verkehrsmittel)) +
+  
+  geom_col(color = "black", position = position_dodge()) +
+  
+  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+  
+  facet_wrap(.~ Source_ext) +
+  
+  labs(y = "Anteil am Modal Split") +
+  
+  theme_bw() +
+  
+  theme(axis.text.x = element_text(angle = 90), legend.position = "bottom")
+
+save_plot_as_jpg(plt.distance.share.both, paste0("distance_share_compare"))
+rm(distance_share_vs_long)
+
+modal_share_both_long = mid.modal.share %>%
+  filter(Distanzgruppe == "Gesamt") %>%
+  select(-Distanzgruppe) %>%
+  mutate(Source = "Mobilität in Deutschland 2017") %>%
+  pivot_longer(cols = -Source, names_to = "Verkehrsmittel", values_to = "share") %>%
+  bind_rows(modal_share) %>%
+  replace_na(list(Source = "Open-Vulkaneifel-Scenario")) %>%
+  mutate(Verkehrsmittel = factor(Verkehrsmittel, levels = c("Fuß", "Fahrrad", "ÖV", "MIV (Mitfahrer)", "MIV (Fahrer)")))
+
+plt.modal.split.both = ggplot(modal_share_both_long, aes(Verkehrsmittel, share, fill = Verkehrsmittel)) +
+  
+  geom_col(color = "black", position = position_dodge()) +
+  
+  geom_text(aes(label = round(share, 2)), vjust = -0.70) +
+  
+  scale_y_continuous(breaks = seq(0, .6, .1)) +
+  
+  coord_cartesian(ylim = c(0, 0.6)) +
+  
+  labs(y = "Anteil am Modal Split") +
+  
+  facet_wrap(.~ Source) +
+  
+  theme_bw() +
+  
+  theme(legend.position = "bottom")
+
+save_plot_as_jpg(plt.modal.split.both, paste0("modal_split_both"))
