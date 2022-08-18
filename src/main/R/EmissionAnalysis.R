@@ -3,6 +3,8 @@ library(sf)
 
 options(scipen=999)
 
+sample.size = 0.25
+
 ##Emission Analysis for Base Case and both Plan Cases
 
 prepare_legs <- function(legsFilePath, shapeFilePath, vehicleKilometerFilePath, n){
@@ -56,15 +58,21 @@ prepare_legs <- function(legsFilePath, shapeFilePath, vehicleKilometerFilePath, 
                              ifelse(mode == "pt_bus", "ÖPNV_Bus",
                                   ifelse(mode == "pt_train", "ÖPNV_Zug",
                                     ifelse(mode == "drt", "DRT", mode))))
+    ) %>%
+    
+    mutate(pkm = ifelse(mode_ger == "MIV", miv.pkm, pkm))
+  
+  if("MIV" %in% base.case.pkm$mode_ger == F){
+    miv = data.frame(
+      mode = c("car"),
+      mode_ger = c("MIV"),
+      pkm = c(miv.pkm)
     )
+    
+    base.case.pkm = bind_rows(base.case.pkm, miv)
+  }
   
-  entry = data.frame(
-    mode = c("car_2"),
-    pkm = c(miv.pkm),
-    mode_ger = c("MIV")
-  )
-  
-  bind_rows(base.case.pkm, entry)
+  base.case.pkm
 }
 
 merge_with_emissions <- function(legs, warmEmissionFilePath, coldEmissionFilePath){
@@ -105,6 +113,8 @@ merge_with_emissions <- function(legs, warmEmissionFilePath, coldEmissionFilePat
     
     mutate_if(is.double, function(x){ x / 1000}) %>%
     
+    mutate_if(is.double, function(x){x * (1 / sample.size)}) %>%
+    
     left_join(legs, by = c("mode" = "mode_ger")) %>%
     
     select(- mode.y) %>%
@@ -112,6 +122,31 @@ merge_with_emissions <- function(legs, warmEmissionFilePath, coldEmissionFilePat
     mutate(CO2_per_pkm = CO2_TOTAL / pkm)
   
   emissions.sum
+}
+
+include_sample_size <- function(emissions, sample.size = c(0.01, 0.1, 0.25)){
+  
+  miv = emissions %>%
+    filter(!str_detect(mode, "ÖPNV")) %>%
+    mutate_at(c("CO", "CO2_TOTAL", "PM", "NOx", "NO2", "pkm"), function(x){ x * (1 / sample.size)})
+  
+  pt = emissions %>%
+    filter(str_detect(mode, "ÖPNV")) %>%
+    mutate(pkm = pkm * (1/sample.size),
+           CO2_per_pkm = CO2_TOTAL / pkm)
+  
+  bind_rows(miv, pt)
+}
+
+join_pt_cols <- function(sum){
+  
+  sum %>%
+    pivot_longer(names_to = "attribute", values_to = "value", cols = -mode) %>%
+    pivot_wider(names_from = mode, values_from = "value") %>%
+    mutate(ÖPNV = ÖPNV_Bus + ÖPNV_Zug) %>%
+    select(-c(ÖPNV_Zug, ÖPNV_Bus)) %>%
+    pivot_longer(cols = -"attribute", names_to = "mode", values_to = "value") %>%
+    pivot_wider(names_from = "attribute", values_from = "value")
 }
 
 SHAPEFILE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vulkaneifel-scenario/vulkaneifel-v1.0-25pct/dilutionArea/dilutionArea.shp"
@@ -123,10 +158,15 @@ VEHICLE_KM_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/stu
 
 base.case.pkm = prepare_legs(legsFilePath = LEGS_BASE_CASE, shapeFilePath = SHAPEFILE, vehicleKilometerFilePath = VEHICLE_KM_BASE_CASE, n = 1.25)
 
-base.case.sum = merge_with_emissions(legs = base.case.pkm, warmEmissionFilePath = WARM_EMISSIONS_BASE_CASE, coldEmissionFilePath = COLD_EMISSIONS_BASE_CASE)
+base.case.sum.sample = merge_with_emissions(legs = base.case.pkm, warmEmissionFilePath = WARM_EMISSIONS_BASE_CASE, coldEmissionFilePath = COLD_EMISSIONS_BASE_CASE)
+
+base.case.sum = include_sample_size(emissions = base.case.sum.sample, sample.size = sample.size)
 
 base.case.sum.long = base.case.sum %>%
   
+  join_pt_cols() %>%
+  
+  #continue as intended
   select(-CO2_per_pkm) %>%
   
   pivot_longer(cols = -c(mode, pkm), names_to = "emission_type", values_to = "emission") %>%
@@ -164,12 +204,17 @@ plt.base.case.emissions = ggplot(base.case.sum.long, aes(x = mode, y = emission_
 WARM_EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_warm_emissions.csv"
 COLD_EMISSIONS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_cold_emissions.csv"
 LEGS_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-60/fleet-size-60-plan-case-1.output_legs.csv.gz"
+VEHICLE_KM_PLAN_CASE_1 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1-vehicle_kilometers.csv"
 
-plan.case.1.pkm = prepare_legs(legsFilePath = LEGS_PLAN_CASE_1, shapeFilePath = SHAPEFILE)
+plan.case.1.pkm = prepare_legs(legsFilePath = LEGS_PLAN_CASE_1, shapeFilePath = SHAPEFILE, vehicleKilometerFilePath = VEHICLE_KM_PLAN_CASE_1, n = 1.25)
 
-emissions.1.sum = merge_with_emissions(legs = plan.case.1.pkm, warmEmissionFilePath = WARM_EMISSIONS_PLAN_CASE_1, coldEmissionFilePath = COLD_EMISSIONS_PLAN_CASE_1)
+emissions.1.sum.sample = merge_with_emissions(legs = plan.case.1.pkm, warmEmissionFilePath = WARM_EMISSIONS_PLAN_CASE_1, coldEmissionFilePath = COLD_EMISSIONS_PLAN_CASE_1)
+
+emissions.1.sum = include_sample_size(emissions = emissions.1.sum.sample, sample.size = sample.size)
 
 emissions.1.long = emissions.1.sum %>%
+  
+  join_pt_cols() %>%
   
   select(-CO2_per_pkm) %>%
   
@@ -197,7 +242,7 @@ pt.vs.drt = emissions.1.sum %>%
   
   filter(mode == "DRT") %>%
   
-  bind_rows(base.case.sum)
+  bind_rows(join_pt_cols(base.case.sum))
 
 ggplot(pt.vs.drt, aes(mode, CO2_per_pkm)) +
   
@@ -220,7 +265,26 @@ pt.vs.drt.wide = pt.vs.drt.ext %>%
   
   pivot_wider(names_from = "mode", values_from = c(emission, emission_pkm_g)) %>%
   
-  mutate(emission_diff = emission_DRT / emission_ÖPNV)
+  mutate(emission_diff = emission_pkm_g_DRT / emission_pkm_g_ÖPNV)
+
+ggplot(pt.vs.drt.wide, aes(x = emission_type, y = emission_diff, fill = emission_type)) +
+  
+  geom_col() +
+  
+  geom_text(aes(label = round(emission_diff, 2)), vjust = - 1) +
+  
+  coord_cartesian(ylim = c(1, 400)) +
+  
+  scale_y_log10() +
+  
+  labs(y = "Prozentualer Anstieg der Emissionen pro Personenkilometer",
+       x = "Emissionsart") +
+  
+  theme_bw() +
+  
+  theme(legend.position = "none")
+
+ggsave(filename = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/Planfall_1_Proz_Veränderung.jpg")
 
 ## Plot emission per pkm for each emission category
 ggplot(pt.vs.drt.ext, aes(mode, emission_pkm_g, fill = mode)) +
@@ -239,6 +303,7 @@ ggplot(pt.vs.drt.ext, aes(mode, emission_pkm_g, fill = mode)) +
 WARM_EMISSIONS_PLAN_CASE_2 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-2_warm_emissions.csv"
 COLD_EMISSIONS_PLAN_CASE_2 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-2_cold_emissions.csv"
 LEGS_PLAN_CASE_2 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-400/fleet-size-400-plan-case-2.output_legs.csv.gz"
+VEHICLE_KM_PLAN_CASE_2 = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-2-vehicle_kilometers.csv"
 
 sumEmissionsByType <- function(emissions, case = c("Nullfall", "Planfall 1", "Planfall 2")){
   
@@ -268,9 +333,11 @@ compareTotalEmissions <- function(emissions0, emissions1, emissions2){
     select(case, emission_type, emission)
 }
 
-plan.case.2.pkm = prepare_legs(legsFilePath = LEGS_PLAN_CASE_2, shapeFilePath = SHAPEFILE)
+plan.case.2.pkm = prepare_legs(legsFilePath = LEGS_PLAN_CASE_2, shapeFilePath = SHAPEFILE, vehicleKilometerFilePath = VEHICLE_KM_PLAN_CASE_2, n = 1.25)
 
-emissions.2.sum = merge_with_emissions(legs = plan.case.2.pkm, warmEmissionFilePath = WARM_EMISSIONS_PLAN_CASE_2, coldEmissionFilePath = COLD_EMISSIONS_PLAN_CASE_2)
+emissions.2.sum.sample = merge_with_emissions(legs = plan.case.2.pkm, warmEmissionFilePath = WARM_EMISSIONS_PLAN_CASE_2, coldEmissionFilePath = COLD_EMISSIONS_PLAN_CASE_2)
+
+emissions.2.sum = include_sample_size(emissions = emissions.2.sum.sample, sample.size = 0.25)
 
 emissions.2.long = emissions.2.sum %>%
   
