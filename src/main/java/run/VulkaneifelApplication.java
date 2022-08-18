@@ -1,13 +1,13 @@
 package run;
 
 import Study_Analysis.EmissionCSVWriter;
+import Study_Analysis.VehicleKilometerAnalysis;
 import org.matsim.application.MATSimApplication;
 import org.matsim.application.analysis.emissions.AirPollutionByVehicleCategory;
 import org.matsim.application.prepare.population.CleanPopulation;
 import org.matsim.application.prepare.population.DownSamplePopulation;
 import org.matsim.application.prepare.population.ResolveGridCoordinates;
 import org.matsim.application.prepare.population.TrajectoryToPlans;
-import org.matsim.application.prepare.pt.CreateTransitScheduleFromGtfs;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup;
 import org.matsim.core.config.groups.PlansCalcRouteConfigGroup;
@@ -24,7 +24,7 @@ import java.util.List;
         DownSamplePopulation.class
 })
 @MATSimApplication.Analysis({
-        AirPollutionByVehicleCategory.class, EmissionCSVWriter.class
+        AirPollutionByVehicleCategory.class, EmissionCSVWriter.class, VehicleKilometerAnalysis.class
 })
 
 public class VulkaneifelApplication extends MATSimApplication {
