@@ -113,8 +113,6 @@ merge_with_emissions <- function(legs, warmEmissionFilePath, coldEmissionFilePat
     
     mutate_if(is.double, function(x){ x / 1000}) %>%
     
-    mutate_if(is.double, function(x){x * (1 / sample.size)}) %>%
-    
     left_join(legs, by = c("mode" = "mode_ger")) %>%
     
     select(- mode.y) %>%
@@ -128,7 +126,8 @@ include_sample_size <- function(emissions, sample.size = c(0.01, 0.1, 0.25)){
   
   miv = emissions %>%
     filter(!str_detect(mode, "ÖPNV")) %>%
-    mutate_at(c("CO", "CO2_TOTAL", "PM", "NOx", "NO2", "pkm"), function(x){ x * (1 / sample.size)})
+    mutate_at(c("CO", "CO2_TOTAL", "PM", "NOx", "NO2", "pkm"), function(x){ x * (1 / sample.size)}) %>%
+    mutate(CO2_per_pkm = CO2_TOTAL / pkm)
   
   pt = emissions %>%
     filter(str_detect(mode, "ÖPNV")) %>%
@@ -293,7 +292,7 @@ ggplot(pt.vs.drt.ext, aes(mode, emission_pkm_g, fill = mode)) +
   
   facet_wrap(~ emission_type, scales = "free") +
   
-  labs(x = "Verkehrsmittel", y = "CO2 / pkm in kg") +
+  labs(x = "Verkehrsmittel", y = "Emissionen je pkm in kg") +
   
   theme_bw() +
   
@@ -377,20 +376,14 @@ ggplot(pt.vs.drt.2, aes(mode, CO2_per_pkm)) +
 
 pt.vs.drt.ext.2 = pt.vs.drt.2 %>%
   
+  join_pt_cols() %>%
+  
   select(-CO2_per_pkm) %>%
   
   pivot_longer(cols = -c(mode, pkm), names_to = "emission_type", values_to = "emission") %>%
   
   mutate(emission_type = factor(emission_type, levels = c("CO2_TOTAL", "CO", "NO2", "NOx", "PM")),
          emission_pkm_g = emission * 1000 / pkm)
-
-pt.vs.drt.wide = pt.vs.drt.ext.2 %>%
-  
-  select(-pkm) %>%
-  
-  pivot_wider(names_from = "mode", values_from = c(emission, emission_pkm_g)) %>%
-  
-  mutate(emission_diff = emission_DRT / emission_ÖPNV)
 
 ggplot(filter(pt.vs.drt.ext.2, mode != "MIV"), aes(mode, emission_pkm_g, fill = mode)) +
   
@@ -420,3 +413,79 @@ ggplot(total.emission.vs, aes(case, emission, fill = case)) +
   theme_bw() +
   
   theme(legend.position = "none")
+
+drt.savings = c(0, emissions.1.sum$CO2_TOTAL[1], emissions.2.sum$CO2_TOTAL[1])
+
+netto.emissions = total.emission.vs %>%
+  filter(emission_type == "CO2_TOTAL") %>%
+  bind_cols(drt.savings) %>%
+  rename("drt_savings" = "...4") %>%
+  mutate("netto_emission_t" = (emission - drt_savings) / 1000)
+  
+ggplot(netto.emissions, aes(case, netto_emission_t)) +
+  
+  geom_col()
+
+
+drt.vs.all.pkm = pt.vs.drt.ext.2 %>%
+  
+  select(-pkm) %>%
+  
+  pivot_wider(names_from = "mode", values_from = c(emission, emission_pkm_g)) %>%
+  
+  mutate(diff_miv = emission_pkm_g_DRT / emission_pkm_g_MIV,
+         diff_pt = emission_pkm_g_DRT / emission_pkm_g_ÖPNV) %>%
+  
+  select(emission_type, diff_miv, diff_pt) %>%
+  
+  pivot_longer(cols = -emission_type, names_to = "diff_to", values_to = "diff") %>%
+  
+  mutate(diff_to = ifelse(str_detect(diff_to, "pt"), "ÖPNV", "MIV"))
+
+ggplot(drt.vs.all.pkm, aes(emission_type, diff, fill = emission_type)) +
+  
+  geom_col() +
+  
+  geom_text(aes(label = round(diff,2)), vjust = -0.5) +
+  
+  labs(x = "Emissionstyp", y = "Verhältnis von DRT - Emissionen pro Personenkilometer\n zu konventionellem Verkehrsmittel") +
+  
+  scale_y_log10() +
+  
+  facet_wrap(. ~ diff_to) +
+  
+  theme_bw() +
+  
+  theme(legend.position = "none")
+
+ggsave(filename = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/DRT-Vergleich.jpg")
+
+###### Kennziffern für den Bericht ######
+
+#Verhältnis MIV Emissionen zu PT Emissionen
+co2.total.0 = sum(base.case.sum$CO2_TOTAL)
+print("MIV Emission share:")
+base.case.sum$CO2_TOTAL[1] / co2.total.0 * 100
+
+print("Plan Case 1 total DRT CO2 Emissions:")
+emissions.1.sum$CO2_TOTAL[1]
+emissions.1.sum$CO2_TOTAL[1] / base.case.sum$CO2_TOTAL[2] * 100
+
+print("Total CO2 emissions in plan case 1:")
+co2.total.1 = emissions.1.sum$CO2_TOTAL[1] + emissions.1.sum$CO2_TOTAL[2]
+co2.total.1
+(co2.total.1 / sum(base.case.sum$CO2_TOTAL) - 1) * 100
+
+print("Total CO2 emissions in plan case 2:")
+co2.total.2 = emissions.2.sum$CO2_TOTAL[1] + emissions.2.sum$CO2_TOTAL[2]
+co2.total.2
+(co2.total.2 / sum(base.case.sum$CO2_TOTAL) - 1) * 100
+
+print("Plan Case 1 total DRT CO2 Emissions:")
+emissions.2.sum$CO2_TOTAL[1]
+emissions.2.sum$CO2_TOTAL[1] / co2.total.2 * 100
+
+print("Non-Binnenverkehr MIV Emissions:")
+emissions.2.sum$CO2_TOTAL[2]
+
+rm(co2.total.0, co2.total.1, co2.total.2)
