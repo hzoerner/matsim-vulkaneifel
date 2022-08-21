@@ -124,9 +124,18 @@ drt.trips.1 = drt.trips.raw %>%
   mutate(emptyDistanceShare = emptyDistance_m / drivenDistance_m,
          distanceGroup = cut(x = drivenDistance_m, breaks = breaks, labels = levels),
          distanceGroup = factor(distanceGroup)
-         )
+         ) %>%
+  rename(
+    "drivenDistance_km" = "drivenDistance_m",
+    "occupiedDistance_km" = "occupiedDistance_m",
+    "emptyDistance_km" = "emptyDistance_m"
+  )
 
-colnames(drt.trips.1) = str_replace(colnames(drt.trips.1), "_m", "_km")
+drt.trips.1 %>%
+  
+  filter(drivenDistance_km <= 300) %>%
+  
+  nrow()
 
 drt.trips.sum = drt.trips.1 %>%
   group_by(distanceGroup) %>%
@@ -138,11 +147,48 @@ ggplot(drt.trips.sum, aes(x = distanceGroup, y = n)) +
   
   geom_text(aes(label = n), nudge_y = .5) +
   
-  labs(x = "Tägliche Distanz",
+  labs(x = "Tägliche gefahrene Distanz je Fahrzeug",
        y = "Anzahl") +
   
   theme_bw()
 
+ggsave(filename = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/Planfall_1_Fahrleistungen.jpg")
+
+##Summary of empty distance kilometers and total emissions
+mean(drt.trips.1$emptyDistanceShare)
+max(drt.trips.1$emptyDistanceShare)
+range(drt.trips.1$emptyDistanceShare)
+
+emissions.warm.1 = read.csv("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_warm_emissions.csv")
+emissions.cold.1 = read.csv("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-1_cold_emissions.csv")
+
+emissions.1 = emissions.warm.1 %>%
+  
+  bind_rows(emissions.cold.1) %>%
+  
+  filter(str_detect(vehicleId, "drt")) %>%
+  
+  group_by(vehicleId) %>%
+  
+  summarise_all(sum) %>%
+  
+  left_join(drt.trips.1, by = "vehicleId") %>%
+  
+  mutate(electric = ifelse(drivenDistance_km < 300, "electric", "non-electric"),
+         CO2_kg = CO2_TOTAL / 1000) %>%
+  
+  select(vehicleId, electric, drivenDistance_km, CO2_kg)
+
+
+non.electric.1 = emissions.1 %>%
+  
+  filter(electric == "non-electric")
+
+sum(non.electric.1$CO2_kg) * 4
+
+rm(emissions.cold.1, emissions.warm.1)
+
+####### Distance Analysis Plan Case 2 #######
 drt2 = read.csv2("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/fleet-size-400/fleet-size-400-plan-case-2.500.vehicleDistanceStats_drt.csv", dec = ".")
 
 drt2.1 = drt2 %>% 
@@ -172,6 +218,63 @@ ggplot(drt2.sum, aes(x = distanceGroup, y = n)) +
   
   theme(axis.text.x = element_text(angle = 90))
 
+ggsave(filename = "C:/Users/ACER/Desktop/Uni/Bachelorarbeit/Grafiken/Planfall_2_Fahrleistungen.jpg")
+
+colnames(drt2.1) = str_replace(colnames(drt2.1), "_m", "_km")
+
+drt2.1 %>%
+  
+  filter(drivenDistance_km <= 300) %>%
+  
+  nrow()
+
+drt.trips.sum.2 = drt2.1 %>%
+  group_by(distanceGroup) %>%
+  summarise(n = n())
+
+##Summary of empty distance kilometers and total emissions
+mean(drt2.1$emptyDistance_share)
+max(drt2.1$emptyDistance_share)
+range(drt2.1$emptyDistance_share)
+
+mean(drt2.1$drivenDistance_km)
+median(drt2.1$drivenDistance_km)
+
+drt2.1 %>%
+  
+  filter(drivenDistance_km > 600) %>%
+  
+  nrow() / 400
+
+emissions.warm.2 = read.csv("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-2_warm_emissions.csv")
+emissions.cold.2 = read.csv("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/plan-case-2_cold_emissions.csv")
+
+emissions.2 = emissions.warm.2 %>%
+  
+  bind_rows(emissions.cold.2) %>%
+  
+  filter(str_detect(vehicleId, "drt")) %>%
+  
+  group_by(vehicleId) %>%
+  
+  summarise_all(sum) %>%
+  
+  left_join(drt2.1, by = "vehicleId") %>%
+  
+  mutate(electric = ifelse(drivenDistance_km < 300, "electric", "non-electric"),
+         CO2_g = CO2_TOTAL / 1000) %>%
+  
+  select(vehicleId, electric, drivenDistance_km, CO2_g)
+
+
+non.electric.2 = emissions.2 %>%
+  
+  filter(electric == "non-electric")
+
+sum(non.electric.2$CO2_g)
+
+rm(emissions.cold.2, emissions.warm.2)
+
 ggplot(waiting.time.data.2, aes(fleetsize, wait_p95_min)) +
   
   geom_line() +
@@ -186,3 +289,14 @@ ggplot(waiting.time.data.2, aes(fleetsize, wait_p95_min)) +
        y = "95-Percentil der Wartezeit") +
   
   theme_bw()
+
+##### ANALYSIS OF PT VEHICLE EMISSIONS #####
+vehicle.km = read.csv("C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/baseCase-vehicle_kilometers.csv")
+pt = emissions.warm.2 %>%
+  filter(CO2_TOTAL != 0) %>%
+  filter(str_detect(vehicleId, "pt")) %>%
+  select(vehicleId, CO2_TOTAL) %>%
+  mutate(CO2_TOTAL_kg = CO2_TOTAL / 1000) %>%
+  left_join(vehicle.km, by = "vehicleId")
+
+sum(pt$CO2_TOTAL_kg)
