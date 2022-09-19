@@ -156,7 +156,7 @@ LEGS_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/scenario/open-vu
 VEHICLE_KM_BASE_CASE = "C:/Users/ACER/IdeaProjects/matsim-vulkaneifel/output/study/baseCase-vehicle_kilometers.csv"
 
 base.case.pkm = prepare_legs(legsFilePath = LEGS_BASE_CASE, shapeFilePath = SHAPEFILE, vehicleKilometerFilePath = VEHICLE_KM_BASE_CASE, n = 1.25)
-
+base.case.pkm$pkm[2] = 281588.27 #calculated from plans file
 base.case.sum.sample = merge_with_emissions(legs = base.case.pkm, warmEmissionFilePath = WARM_EMISSIONS_BASE_CASE, coldEmissionFilePath = COLD_EMISSIONS_BASE_CASE)
 
 base.case.sum = include_sample_size(emissions = base.case.sum.sample, sample.size = sample.size)
@@ -481,7 +481,7 @@ co2.total.2 = emissions.2.sum$CO2_TOTAL[1] + emissions.2.sum$CO2_TOTAL[2]
 co2.total.2
 (co2.total.2 / sum(base.case.sum$CO2_TOTAL) - 1) * 100
 
-print("Plan Case 1 total DRT CO2 Emissions:")
+print("Plan Case 2 total DRT CO2 Emissions:")
 emissions.2.sum$CO2_TOTAL[1]
 emissions.2.sum$CO2_TOTAL[1] / co2.total.2 * 100
 
