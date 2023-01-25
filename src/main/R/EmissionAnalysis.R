@@ -264,7 +264,7 @@ pt.vs.drt.wide = pt.vs.drt.ext %>%
   
   pivot_wider(names_from = "mode", values_from = c(emission, emission_pkm_g)) %>%
   
-  mutate(emission_diff = emission_pkm_g_DRT / emission_pkm_g_ÖPNV)
+  mutate(emission_diff = emission_pkm_g_DRT / emission_pkm_g_ÖPNV) # * 100!!!!
 
 ggplot(pt.vs.drt.wide, aes(x = emission_type, y = emission_diff, fill = emission_type)) +
   
